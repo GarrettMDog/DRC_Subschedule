@@ -47,8 +47,12 @@ function requireOfficeAuth(req, res, next) {
       issuer: `https://login.microsoftonline.com/${TENANT_ID}/v2.0`,
       algorithms: ['RS256']
     },
-    (err, decoded) => {
+        (err, decoded) => {
       if (err) {
+        // Log the *actual* reason (jsonwebtoken's messages are specific —
+        // e.g. "jwt audience invalid. expected: ...", "jwt issuer invalid...",
+        // "jwt expired", "invalid signature") instead of guessing blind.
+        console.error('Token verification failed:', err.name, '-', err.message);
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
       req.user = {
