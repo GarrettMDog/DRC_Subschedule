@@ -9,6 +9,11 @@ const CLIENT_ID = process.env.ENTRA_CLIENT_ID;
 // carry that full URI as the audience — not the bare client ID GUID — confirmed
 // directly from a decoded live token, despite general docs suggesting otherwise.
 const EXPECTED_AUDIENCE = `api://${CLIENT_ID}`;
+// The token's actual issuer format, confirmed directly from a decoded live
+// token rather than assumed — this app registration issues v1.0-style
+// issuer URIs (sts.windows.net) for this custom API scope, not the v2.0
+// format (login.microsoftonline.com/.../v2.0) originally assumed.
+const EXPECTED_ISSUER = `https://sts.windows.net/${TENANT_ID}/`;
 
 const client = jwksClient({
   jwksUri: `https://login.microsoftonline.com/${TENANT_ID}/discovery/v2.0/keys`,
@@ -44,14 +49,11 @@ function requireOfficeAuth(req, res, next) {
     getSigningKey,
     {
       audience: EXPECTED_AUDIENCE,
-      issuer: `https://login.microsoftonline.com/${TENANT_ID}/v2.0`,
+      issuer: EXPECTED_ISSUER,
       algorithms: ['RS256']
     },
-        (err, decoded) => {
+    (err, decoded) => {
       if (err) {
-        // Log the *actual* reason (jsonwebtoken's messages are specific —
-        // e.g. "jwt audience invalid. expected: ...", "jwt issuer invalid...",
-        // "jwt expired", "invalid signature") instead of guessing blind.
         console.error('Token verification failed:', err.name, '-', err.message);
         return res.status(401).json({ error: 'Invalid or expired token' });
       }
