@@ -11,9 +11,16 @@ const myScheduleRouter = require('./routes/mySchedule');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Normalized so a trailing slash or stray whitespace from copy-pasting the
+// Vercel URL into Render's env var field doesn't silently break the exact
+// string match CORS does under the hood.
+const FRONTEND_ORIGIN = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+  .trim()
+  .replace(/\/$/, '');
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173'
+    origin: FRONTEND_ORIGIN
   })
 );
 app.use(express.json());
@@ -30,4 +37,5 @@ app.use('/api/my-schedule/:token', myScheduleRouter);
 
 app.listen(PORT, () => {
   console.log(`SubSchedule backend listening on port ${PORT}`);
+  console.log(`CORS allowing origin: ${FRONTEND_ORIGIN}`);
 });
