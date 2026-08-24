@@ -12,5 +12,9 @@ export const msalConfig = {
 };
 
 export const loginRequest = {
-  scopes: ['User.Read']
+  // Requests a token whose audience is THIS app (via its own exposed API
+  // scope), not Microsoft Graph. The backend validates audience === its own
+  // Client ID, so a Graph-scoped token (e.g. 'User.Read') would always be
+  // rejected as invalid — it was never meant for this API in the first place.
+  scopes: [`api://${import.meta.env.VITE_ENTRA_CLIENT_ID}/access_as_user`]
 };
