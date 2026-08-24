@@ -1,0 +1,88 @@
+/* Mobile-first: single column by default. Wider screens get a real two-pane
+   layout (form/actions on the left, content on the right) instead of a
+   narrow strip of controls floating in a sea of empty space. */
+.page-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .page-layout {
+    grid-template-columns: 340px 1fr;
+  }
+}
+
+/* Status-colored left border gives cards visual structure at a glance,
+   without needing to read the badge text first. */
+.status-card {
+  border: 1px solid var(--colorNeutralStroke2);
+  border-left: 4px solid var(--status-color, var(--colorNeutralStroke1));
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--colorNeutralBackground1);
+}
+
+/* Calendar grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--colorNeutralStroke2);
+  border: 1px solid var(--colorNeutralStroke2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.calendar-weekday {
+  background: var(--colorNeutralBackground3);
+  padding: 6px 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--colorNeutralForeground3);
+}
+
+.calendar-day {
+  background: var(--colorNeutralBackground1);
+  min-height: 76px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calendar-day.is-outside-month {
+  background: var(--colorNeutralBackground2);
+}
+
+.calendar-day-number {
+  font-size: 11px;
+  color: var(--colorNeutralForeground3);
+  padding: 2px 2px 0;
+}
+
+.calendar-day.is-today .calendar-day-number {
+  font-weight: 700;
+  color: var(--colorBrandForeground1);
+}
+
+.calendar-pill {
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-more {
+  font-size: 10px;
+  color: var(--colorNeutralForeground3);
+  padding: 0 4px;
+}

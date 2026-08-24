@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Button, Badge, Textarea, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
+import { STATUS_HEX } from '../theme';
 
 const STATUS_COLOR = {
   pending: 'warning',
@@ -63,7 +64,8 @@ export default function SubSchedule() {
         {data.assignments.map((a) => (
           <div
             key={a.id}
-            style={{ border: '1px solid var(--colorNeutralStroke2)', borderRadius: 8, padding: 14 }}
+            className="status-card"
+            style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280', padding: 14 }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>

@@ -46,83 +46,83 @@ export default function SubcontractorDirectory() {
   if (loading) return <p>Loading…</p>;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
         </MessageBar>
       )}
-      <section>
-        <h3>Add a subcontractor</h3>
-        <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12, maxWidth: 420 }}>
-          <Field label="Company name" required>
-            <Input
-              value={form.company_name}
-              onChange={(e) => setForm({ ...form, company_name: e.target.value })}
-            />
-          </Field>
-          <Field label="Trade">
-            <Input value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} />
-          </Field>
-          <Field label="Contact name">
-            <Input
-              value={form.contact_name}
-              onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
-            />
-          </Field>
-          <Field label="Email">
-            <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          </Field>
-          <Field label="Phone">
-            <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          </Field>
-          <Button appearance="primary" type="submit">
-            Add subcontractor
-          </Button>
-        </form>
-      </section>
 
-      <section>
-        <h3>Directory</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {subs.map((s) => (
-            <div
-              key={s.id}
-              style={{ border: '1px solid var(--colorNeutralStroke2)', borderRadius: 8, padding: 12 }}
-            >
-              <strong>{s.company_name}</strong> {s.trade && `· ${s.trade}`}
-              <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {s.contact_name} {s.email && `· ${s.email}`} {s.phone && `· ${s.phone}`}
+      <div className="page-layout">
+        <section>
+          <h3 style={{ marginTop: 0 }}>Add a subcontractor</h3>
+          <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
+            <Field label="Company name" required>
+              <Input
+                value={form.company_name}
+                onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+              />
+            </Field>
+            <Field label="Trade">
+              <Input value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} />
+            </Field>
+            <Field label="Contact name">
+              <Input
+                value={form.contact_name}
+                onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+              />
+            </Field>
+            <Field label="Email">
+              <Input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+            <Field label="Phone">
+              <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            </Field>
+            <Button appearance="primary" type="submit">
+              Add subcontractor
+            </Button>
+          </form>
+        </section>
+
+        <section>
+          <h3 style={{ marginTop: 0 }}>Directory</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {subs.map((s) => (
+              <div key={s.id} className="status-card">
+                <strong>{s.company_name}</strong> {s.trade && `· ${s.trade}`}
+                <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                  {s.contact_name} {s.email && `· ${s.email}`} {s.phone && `· ${s.phone}`}
+                </div>
+                <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <code
+                    style={{
+                      fontSize: 12,
+                      background: 'var(--colorNeutralBackground3)',
+                      padding: '4px 8px',
+                      borderRadius: 4,
+                      wordBreak: 'break-all'
+                    }}
+                  >
+                    {`${window.location.origin}/my-schedule/${s.link_token}`}
+                  </code>
+                  <Button
+                    size="small"
+                    appearance="secondary"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/my-schedule/${s.link_token}`);
+                      setCopiedId(s.id);
+                      setTimeout(() => setCopiedId(null), 1500);
+                    }}
+                  >
+                    {copiedId === s.id ? 'Copied!' : 'Copy link'}
+                  </Button>
+                </div>
               </div>
-              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <code
-                  style={{
-                    fontSize: 12,
-                    background: 'var(--colorNeutralBackground3)',
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    wordBreak: 'break-all'
-                  }}
-                >
-                  {`${window.location.origin}/my-schedule/${s.link_token}`}
-                </code>
-                <Button
-                  size="small"
-                  appearance="secondary"
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/my-schedule/${s.link_token}`);
-                    setCopiedId(s.id);
-                    setTimeout(() => setCopiedId(null), 1500);
-                  }}
-                >
-                  {copiedId === s.id ? 'Copied!' : 'Copy link'}
-                </Button>
-              </div>
-            </div>
-          ))}
-          {subs.length === 0 && <p>No subcontractors yet.</p>}
-        </div>
-      </section>
+            ))}
+            {subs.length === 0 && <p>No subcontractors yet.</p>}
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
