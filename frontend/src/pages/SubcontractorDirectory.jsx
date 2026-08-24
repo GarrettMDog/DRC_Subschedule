@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Field, Input } from '@fluentui/react-components';
+import { Button, Field, Input, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 
@@ -10,11 +10,19 @@ export default function SubcontractorDirectory() {
   const [subs, setSubs] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [copiedId, setCopiedId] = useState(null);
 
   async function load() {
-    const token = await getToken();
-    setSubs(await api.getSubcontractors(token));
-    setLoading(false);
+    try {
+      setError(null);
+      const token = await getToken();
+      setSubs(await api.getSubcontractors(token));
+    } catch (err) {
+      setError(err.message || 'Something went wrong loading the directory.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -24,16 +32,26 @@ export default function SubcontractorDirectory() {
 
   async function handleAdd(e) {
     e.preventDefault();
-    const token = await getToken();
-    await api.addSubcontractor(token, form);
-    setForm(EMPTY_FORM);
-    await load();
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.addSubcontractor(token, form);
+      setForm(EMPTY_FORM);
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not add that subcontractor.');
+    }
   }
 
   if (loading) return <p>Loading…</p>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      {error && (
+        <MessageBar intent="error">
+          <MessageBarBody>{error}</MessageBarBody>
+        </MessageBar>
+      )}
       <section>
         <h3>Add a subcontractor</h3>
         <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12, maxWidth: 420 }}>
@@ -76,8 +94,29 @@ export default function SubcontractorDirectory() {
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                 {s.contact_name} {s.email && `· ${s.email}`} {s.phone && `· ${s.phone}`}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 4 }}>
-                Schedule link: /my-schedule/{s.link_token}
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <code
+                  style={{
+                    fontSize: 12,
+                    background: 'var(--colorNeutralBackground3)',
+                    padding: '4px 8px',
+                    borderRadius: 4,
+                    wordBreak: 'break-all'
+                  }}
+                >
+                  {`${window.location.origin}/my-schedule/${s.link_token}`}
+                </code>
+                <Button
+                  size="small"
+                  appearance="secondary"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/my-schedule/${s.link_token}`);
+                    setCopiedId(s.id);
+                    setTimeout(() => setCopiedId(null), 1500);
+                  }}
+                >
+                  {copiedId === s.id ? 'Copied!' : 'Copy link'}
+                </Button>
               </div>
             </div>
           ))}
