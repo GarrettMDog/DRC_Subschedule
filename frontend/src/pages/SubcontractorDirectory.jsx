@@ -104,7 +104,7 @@ export default function SubcontractorDirectory() {
       <OverlayDrawer
         open={drawerContent !== null}
         onOpenChange={(_, { open }) => !open && setDrawerContent(null)}
-        position="end"
+        position="start"
         className="detail-drawer"
       >
         <DrawerHeader>
