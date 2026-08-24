@@ -87,65 +87,7 @@ export default function OfficeDashboard() {
         </MessageBar>
       )}
 
-      <div className="page-layout">
-        <section>
-          <h3 style={{ marginTop: 0 }}>Assign a subcontractor</h3>
-          {conflictWarning && (
-            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-              <MessageBarBody>{conflictWarning}</MessageBarBody>
-            </MessageBar>
-          )}
-          <form onSubmit={handleAssign} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Subcontractor">
-              <Dropdown
-                placeholder="Select a subcontractor"
-                value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
-                onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
-              >
-                {subcontractors.map((s) => (
-                  <Option key={s.id} value={String(s.id)}>
-                    {s.company_name}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
-
-            <Field label="Job">
-              <Dropdown
-                placeholder="Select a job"
-                value={jobs.find((j) => j.id === form.job_id)?.name || ''}
-                onOptionSelect={(_, data) => setForm({ ...form, job_id: Number(data.optionValue) })}
-              >
-                {jobs.map((j) => (
-                  <Option key={j.id} value={String(j.id)}>
-                    {j.name}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
-
-            <Field label="Start date">
-              <Input
-                type="date"
-                value={form.start_date}
-                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-              />
-            </Field>
-
-            <Field label="End date">
-              <Input
-                type="date"
-                value={form.end_date}
-                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-              />
-            </Field>
-
-            <Button appearance="primary" type="submit">
-              Assign
-            </Button>
-          </form>
-        </section>
-
+      <div className="dashboard-layout">
         <section>
           <div
             style={{
@@ -205,6 +147,64 @@ export default function OfficeDashboard() {
               {assignments.length === 0 && <p>No assignments yet.</p>}
             </div>
           )}
+        </section>
+
+        <section>
+          <h3 style={{ marginTop: 0 }}>Assign a subcontractor</h3>
+          {conflictWarning && (
+            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+              <MessageBarBody>{conflictWarning}</MessageBarBody>
+            </MessageBar>
+          )}
+          <form onSubmit={handleAssign} style={{ display: 'grid', gap: 12 }}>
+            <Field label="Subcontractor">
+              <Dropdown
+                placeholder="Select a subcontractor"
+                value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
+                onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
+              >
+                {subcontractors.map((s) => (
+                  <Option key={s.id} value={String(s.id)}>
+                    {s.company_name}
+                  </Option>
+                ))}
+              </Dropdown>
+            </Field>
+
+            <Field label="Job">
+              <Dropdown
+                placeholder="Select a job"
+                value={jobs.find((j) => j.id === form.job_id)?.name || ''}
+                onOptionSelect={(_, data) => setForm({ ...form, job_id: Number(data.optionValue) })}
+              >
+                {jobs.map((j) => (
+                  <Option key={j.id} value={String(j.id)}>
+                    {j.name}
+                  </Option>
+                ))}
+              </Dropdown>
+            </Field>
+
+            <Field label="Start date">
+              <Input
+                type="date"
+                value={form.start_date}
+                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+              />
+            </Field>
+
+            <Field label="End date">
+              <Input
+                type="date"
+                value={form.end_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+              />
+            </Field>
+
+            <Button appearance="primary" type="submit">
+              Assign
+            </Button>
+          </form>
         </section>
       </div>
     </div>

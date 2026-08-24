@@ -14,6 +14,22 @@
   }
 }
 
+/* Dashboard specifically: content (list/calendar) is the primary column and
+   comes first in the markup; the assign-form is secondary and narrower,
+   pinned to the right on wide screens. */
+.dashboard-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 900px) {
+  .dashboard-layout {
+    grid-template-columns: 1fr 300px;
+  }
+}
+
 /* Status-colored left border gives cards visual structure at a glance,
    without needing to read the badge text first. */
 .status-card {
@@ -48,7 +64,7 @@
 
 .calendar-day {
   background: var(--colorNeutralBackground1);
-  min-height: 76px;
+  min-height: 92px;
   padding: 4px;
   display: flex;
   flex-direction: column;

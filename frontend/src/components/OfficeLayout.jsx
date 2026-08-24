@@ -49,7 +49,7 @@ export default function OfficeLayout({ children }) {
           })}
         </nav>
       </header>
-      <main style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>{children}</main>
+      <main style={{ padding: 16, maxWidth: 1200, margin: '0 auto' }}>{children}</main>
     </div>
   );
 }
