@@ -102,3 +102,28 @@
   color: var(--colorNeutralForeground3);
   padding: 0 4px;
 }
+
+/* Slide-over detail/create drawer, used across Subcontractors/Jobs/Dashboard.
+   max-width caps it to 90% of viewport so it doesn't feel cramped-but-not-
+   quite-full on narrow phones, without needing a separate media query. */
+.detail-drawer {
+  width: 420px;
+  max-width: 90vw;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--colorNeutralStroke2);
+  border-left: 4px solid var(--status-color, var(--colorNeutralStroke1));
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--colorNeutralBackground1);
+}
+
+.list-row:hover {
+  background: var(--colorNeutralBackground1Hover);
+}
