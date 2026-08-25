@@ -19,7 +19,7 @@ import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange } from '../dateUtils';
 import { STATUS_HEX, JOB_STATUS_HEX } from '../theme';
 
-const EMPTY_FORM = { name: '', address: '', start_date: '', end_date: '' };
+const EMPTY_FORM = { name: '', address: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 
 const ASSIGNMENT_STATUS_COLOR = {
@@ -46,7 +46,7 @@ export default function JobList() {
   // Search / filter / sort — matters more as the job list grows.
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [sortBy, setSortBy] = useState('start_date');
+  const [sortBy, setSortBy] = useState('name');
 
   async function load() {
     try {
@@ -86,8 +86,6 @@ export default function JobList() {
     setEditForm({
       name: job.name,
       address: job.address || '',
-      start_date: job.start_date || '',
-      end_date: job.end_date || '',
       status: job.status || 'active'
     });
   }
@@ -123,10 +121,8 @@ export default function JobList() {
     }
 
     const sorted = [...result].sort((a, b) => {
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
       if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
-      // start_date — jobs without a date sort to the end either way
-      return (a.start_date || '9999-99-99').localeCompare(b.start_date || '9999-99-99');
+      return a.name.localeCompare(b.name);
     });
 
     return sorted;
@@ -175,11 +171,10 @@ export default function JobList() {
         </Field>
         <Field label="Sort by">
           <Dropdown
-            value={sortBy === 'name' ? 'Name (A–Z)' : sortBy === 'status' ? 'Status' : 'Start date'}
+            value={sortBy === 'status' ? 'Status' : 'Name (A–Z)'}
             selectedOptions={[sortBy]}
             onOptionSelect={(_, data) => setSortBy(data.optionValue)}
           >
-            <Option value="start_date">Start date</Option>
             <Option value="name">Name (A–Z)</Option>
             <Option value="status">Status</Option>
           </Dropdown>
@@ -197,8 +192,7 @@ export default function JobList() {
             <div>
               <strong>{j.name}</strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {j.address} {j.address && '·'} {formatDateRange(j.start_date, j.end_date)} ·{' '}
-                {STATUS_LABEL[j.status] || j.status}
+                {j.address} {j.address && '·'} {STATUS_LABEL[j.status] || j.status}
               </div>
             </div>
             <ChevronRight20Regular />
@@ -233,20 +227,6 @@ export default function JobList() {
             </Field>
             <Field label="Address">
               <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-            <Field label="Start date">
-              <Input
-                type="date"
-                value={form.start_date}
-                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-              />
-            </Field>
-            <Field label="End date">
-              <Input
-                type="date"
-                value={form.end_date}
-                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-              />
             </Field>
             <Button appearance="primary" type="submit">
               Add job
@@ -285,20 +265,6 @@ export default function JobList() {
                   <Input
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                  />
-                </Field>
-                <Field label="Start date">
-                  <Input
-                    type="date"
-                    value={editForm.start_date}
-                    onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })}
-                  />
-                </Field>
-                <Field label="End date">
-                  <Input
-                    type="date"
-                    value={editForm.end_date}
-                    onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })}
                   />
                 </Field>
                 <Field label="Status">

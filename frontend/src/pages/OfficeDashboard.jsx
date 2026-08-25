@@ -169,7 +169,7 @@ export default function OfficeDashboard() {
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 16 }}>
                     {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
-                    {formatDateRange(selectedJobDetails.start_date, selectedJobDetails.end_date)} · {selectedJobDetails.status}
+                    {selectedJobDetails.status}
                   </div>
 
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
