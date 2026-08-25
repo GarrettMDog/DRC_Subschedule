@@ -29,10 +29,9 @@ function buildMonthGrid(year, month) {
   return days;
 }
 
-export default function AssignmentCalendar({ assignments }) {
+export default function AssignmentCalendar({ assignments, selectedJobId, onSelectJob }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
-  const [selectedJobId, setSelectedJobId] = useState(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -62,8 +61,9 @@ export default function AssignmentCalendar({ assignments }) {
 
   // Clicking a pill highlights every other pill for that same job across the
   // whole month — clicking the same job again (or Clear) turns it back off.
+  // Selection lives in the parent so the Dashboard's detail panel can share it.
   function togglePillSelection(assignment) {
-    setSelectedJobId((current) => (current === assignment.job_id ? null : assignment.job_id));
+    onSelectJob(selectedJobId === assignment.job_id ? null : assignment.job_id);
   }
 
   const selectedJob = selectedJobId ? assignments.find((a) => a.job_id === selectedJobId) : null;
@@ -99,7 +99,7 @@ export default function AssignmentCalendar({ assignments }) {
           <span>
             Highlighting <strong>{selectedJob.job_name}</strong>
           </span>
-          <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
+          <Button size="small" appearance="subtle" onClick={() => onSelectJob(null)}>
             Clear
           </Button>
         </div>

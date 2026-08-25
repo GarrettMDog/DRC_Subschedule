@@ -31,6 +31,7 @@ export default function OfficeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'calendar'
+  const [selectedJobId, setSelectedJobId] = useState(null);
 
   async function loadAll() {
     try {
@@ -144,6 +145,60 @@ export default function OfficeDashboard() {
               Assign
             </Button>
           </form>
+
+          {selectedJobId &&
+            (() => {
+              const selectedJobDetails = jobs.find((j) => j.id === selectedJobId);
+              const jobAssignments = assignments.filter((a) => a.job_id === selectedJobId);
+              if (!selectedJobDetails) return null;
+              return (
+                <div style={{ marginTop: 24 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 8
+                    }}
+                  >
+                    <h4 style={{ margin: 0 }}>{selectedJobDetails.name}</h4>
+                    <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
+                      Clear
+                    </Button>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 16 }}>
+                    {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
+                    {selectedJobDetails.start_date} – {selectedJobDetails.end_date} · {selectedJobDetails.status}
+                  </div>
+
+                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
+                    Assigned subcontractors ({jobAssignments.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {jobAssignments.map((a) => (
+                      <div
+                        key={a.id}
+                        className="status-card"
+                        style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280' }}
+                      >
+                        <strong>{a.subcontractor_name}</strong>
+                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
+                          {a.start_date} – {a.end_date}
+                        </div>
+                        <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
+                          {a.status}
+                        </Badge>
+                      </div>
+                    ))}
+                    {jobAssignments.length === 0 && (
+                      <p style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                        No subcontractors assigned yet.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
         </section>
 
         <section>
@@ -177,31 +232,45 @@ export default function OfficeDashboard() {
           </div>
 
           {view === 'calendar' ? (
-            <AssignmentCalendar assignments={assignments} />
+            <AssignmentCalendar
+              assignments={assignments}
+              selectedJobId={selectedJobId}
+              onSelectJob={setSelectedJobId}
+            />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {assignments.map((a) => (
-                <div
-                  key={a.id}
-                  className="status-card"
-                  style={{
-                    '--status-color': STATUS_HEX[a.status] || '#6B7280',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 12,
-                    flexWrap: 'wrap'
-                  }}
-                >
-                  <div>
-                    <strong>{a.subcontractor_name}</strong> → {a.job_name}
-                    <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                      {a.start_date} – {a.end_date} · {a.job_address}
+              {assignments.map((a) => {
+                const isSelected = selectedJobId === a.job_id;
+                const isDimmed = selectedJobId !== null && !isSelected;
+                return (
+                  <div
+                    key={a.id}
+                    className="status-card"
+                    style={{
+                      '--status-color': STATUS_HEX[a.status] || '#6B7280',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 12,
+                      flexWrap: 'wrap',
+                      cursor: 'pointer',
+                      opacity: isDimmed ? 0.4 : 1,
+                      boxShadow: isSelected
+                        ? '0 0 0 2px white, 0 0 0 4px var(--colorNeutralForeground1)'
+                        : 'none'
+                    }}
+                    onClick={() => setSelectedJobId(isSelected ? null : a.job_id)}
+                  >
+                    <div>
+                      <strong>{a.subcontractor_name}</strong> → {a.job_name}
+                      <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                        {a.start_date} – {a.end_date} · {a.job_address}
+                      </div>
                     </div>
+                    <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
                   </div>
-                  <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
-                </div>
-              ))}
+                );
+              })}
               {assignments.length === 0 && <p>No assignments yet.</p>}
             </div>
           )}
