@@ -95,6 +95,42 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.calendar-pill:hover {
+  filter: brightness(1.1);
+}
+
+.calendar-pill:focus-visible {
+  outline: 2px solid var(--colorBrandForeground1);
+  outline-offset: 1px;
+}
+
+.calendar-pill.is-selected-job {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--colorNeutralForeground1);
+  transform: scale(1.03);
+}
+
+.calendar-pill.is-dimmed {
+  opacity: 0.3;
+}
+
+.calendar-job-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background: var(--colorNeutralBackground3);
+  font-size: 13px;
 }
 
 .calendar-more {

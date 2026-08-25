@@ -32,6 +32,7 @@ function buildMonthGrid(year, month) {
 export default function AssignmentCalendar({ assignments }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [selectedJobId, setSelectedJobId] = useState(null);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -59,6 +60,14 @@ export default function AssignmentCalendar({ assignments }) {
     setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
   }
 
+  // Clicking a pill highlights every other pill for that same job across the
+  // whole month — clicking the same job again (or Clear) turns it back off.
+  function togglePillSelection(assignment) {
+    setSelectedJobId((current) => (current === assignment.job_id ? null : assignment.job_id));
+  }
+
+  const selectedJob = selectedJobId ? assignments.find((a) => a.job_id === selectedJobId) : null;
+
   return (
     <div>
       <div
@@ -85,6 +94,17 @@ export default function AssignmentCalendar({ assignments }) {
         </div>
       </div>
 
+      {selectedJob && (
+        <div className="calendar-job-banner">
+          <span>
+            Highlighting <strong>{selectedJob.job_name}</strong>
+          </span>
+          <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
+            Clear
+          </Button>
+        </div>
+      )}
+
       <div className="calendar-grid">
         {WEEKDAY_LABELS.map((label) => (
           <div key={label} className="calendar-weekday">
@@ -108,16 +128,24 @@ export default function AssignmentCalendar({ assignments }) {
               }`}
             >
               <div className="calendar-day-number">{day.getDate()}</div>
-              {visible.map((a) => (
-                <div
-                  key={a.id}
-                  className="calendar-pill"
-                  style={{ background: STATUS_HEX[a.status] || '#6B7280' }}
-                  title={`${a.subcontractor_name} → ${a.job_name} (${a.status})`}
-                >
-                  {a.subcontractor_name}
-                </div>
-              ))}
+              {visible.map((a) => {
+                const isSelected = selectedJobId === a.job_id;
+                const isDimmed = selectedJobId !== null && !isSelected;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
+                      isDimmed ? 'is-dimmed' : ''
+                    }`}
+                    style={{ background: STATUS_HEX[a.status] || '#6B7280' }}
+                    title={`${a.subcontractor_name} → ${a.job_name} (${a.status})`}
+                    onClick={() => togglePillSelection(a)}
+                  >
+                    {a.subcontractor_name}
+                  </button>
+                );
+              })}
               {extraCount > 0 && <div className="calendar-more">+{extraCount} more</div>}
             </div>
           );
