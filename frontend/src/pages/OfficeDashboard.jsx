@@ -12,6 +12,7 @@ import {
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX } from '../theme';
+import { formatDateRange } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -168,7 +169,7 @@ export default function OfficeDashboard() {
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 16 }}>
                     {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
-                    {selectedJobDetails.start_date} – {selectedJobDetails.end_date} · {selectedJobDetails.status}
+                    {formatDateRange(selectedJobDetails.start_date, selectedJobDetails.end_date)} · {selectedJobDetails.status}
                   </div>
 
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
@@ -183,7 +184,7 @@ export default function OfficeDashboard() {
                       >
                         <strong>{a.subcontractor_name}</strong>
                         <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
-                          {a.start_date} – {a.end_date}
+                          {formatDateRange(a.start_date, a.end_date)}
                         </div>
                         <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
                           {a.status}
@@ -264,7 +265,7 @@ export default function OfficeDashboard() {
                     <div>
                       <strong>{a.subcontractor_name}</strong> → {a.job_name}
                       <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                        {a.start_date} – {a.end_date} · {a.job_address}
+                        {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
                       </div>
                     </div>
                     <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>

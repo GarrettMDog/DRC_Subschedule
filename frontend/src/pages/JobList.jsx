@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Field, Input, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
+import { formatDateRange } from '../dateUtils';
 
 const EMPTY_FORM = { name: '', address: '', start_date: '', end_date: '' };
 
@@ -89,7 +90,7 @@ export default function JobList() {
               <div key={j.id} className="status-card">
                 <strong>{j.name}</strong>
                 <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                  {j.address} · {j.start_date} – {j.end_date} · {j.status}
+                  {j.address} · {formatDateRange(j.start_date, j.end_date)} · {j.status}
                 </div>
               </div>
             ))}

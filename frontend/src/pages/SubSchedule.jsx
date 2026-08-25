@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Button, Badge, Textarea, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { STATUS_HEX } from '../theme';
+import { formatDateRange } from '../dateUtils';
 
 const STATUS_COLOR = {
   pending: 'warning',
@@ -72,7 +73,7 @@ export default function SubSchedule() {
                 <strong>{a.job_name}</strong>
                 <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>{a.job_address}</div>
                 <div style={{ fontSize: 13, marginTop: 4 }}>
-                  {a.start_date} – {a.end_date}
+                  {formatDateRange(a.start_date, a.end_date)}
                 </div>
               </div>
               <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>

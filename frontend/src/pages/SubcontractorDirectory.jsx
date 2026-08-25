@@ -15,6 +15,7 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX } from '../theme';
+import { formatDateRange } from '../dateUtils';
 
 const EMPTY_FORM = { company_name: '', trade: '', contact_name: '', email: '', phone: '' };
 
@@ -252,7 +253,7 @@ export default function SubcontractorDirectory() {
                       <div>
                         <strong>{a.job_name}</strong>
                         <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                          {a.start_date} – {a.end_date} · {a.job_address}
+                          {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
                         </div>
                       </div>
                       <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
