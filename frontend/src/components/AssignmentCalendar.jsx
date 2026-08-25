@@ -29,7 +29,7 @@ function buildMonthGrid(year, month) {
   return days;
 }
 
-export default function AssignmentCalendar({ assignments, selectedJobId, onSelectJob }) {
+export default function AssignmentCalendar({ assignments, selectedJobId, onSelectJob, labelMode }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -142,7 +142,7 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
                     title={`${a.subcontractor_name} → ${a.job_name} (${a.status})`}
                     onClick={() => togglePillSelection(a)}
                   >
-                    {a.subcontractor_name}
+                    {labelMode === 'job' ? a.job_name : a.subcontractor_name}
                   </button>
                 );
               })}

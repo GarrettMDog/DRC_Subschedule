@@ -32,6 +32,7 @@ export default function OfficeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [view, setView] = useState('list'); // 'list' | 'calendar'
+  const [labelMode, setLabelMode] = useState('subcontractor'); // 'subcontractor' | 'job'
   const [selectedJobId, setSelectedJobId] = useState(null);
 
   async function loadAll() {
@@ -214,21 +215,39 @@ export default function OfficeDashboard() {
             }}
           >
             <h3 style={{ margin: 0 }}>All assignments</h3>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <Button
-                size="small"
-                appearance={view === 'list' ? 'primary' : 'secondary'}
-                onClick={() => setView('list')}
-              >
-                List
-              </Button>
-              <Button
-                size="small"
-                appearance={view === 'calendar' ? 'primary' : 'secondary'}
-                onClick={() => setView('calendar')}
-              >
-                Calendar
-              </Button>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <Button
+                  size="small"
+                  appearance={labelMode === 'subcontractor' ? 'primary' : 'secondary'}
+                  onClick={() => setLabelMode('subcontractor')}
+                >
+                  Subcontractor
+                </Button>
+                <Button
+                  size="small"
+                  appearance={labelMode === 'job' ? 'primary' : 'secondary'}
+                  onClick={() => setLabelMode('job')}
+                >
+                  Job
+                </Button>
+              </div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <Button
+                  size="small"
+                  appearance={view === 'list' ? 'primary' : 'secondary'}
+                  onClick={() => setView('list')}
+                >
+                  List
+                </Button>
+                <Button
+                  size="small"
+                  appearance={view === 'calendar' ? 'primary' : 'secondary'}
+                  onClick={() => setView('calendar')}
+                >
+                  Calendar
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -237,6 +256,7 @@ export default function OfficeDashboard() {
               assignments={assignments}
               selectedJobId={selectedJobId}
               onSelectJob={setSelectedJobId}
+              labelMode={labelMode}
             />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -263,7 +283,15 @@ export default function OfficeDashboard() {
                     onClick={() => setSelectedJobId(isSelected ? null : a.job_id)}
                   >
                     <div>
-                      <strong>{a.subcontractor_name}</strong> → {a.job_name}
+                      {labelMode === 'job' ? (
+                        <>
+                          <strong>{a.job_name}</strong> → {a.subcontractor_name}
+                        </>
+                      ) : (
+                        <>
+                          <strong>{a.subcontractor_name}</strong> → {a.job_name}
+                        </>
+                      )}
                       <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                         {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
                       </div>
