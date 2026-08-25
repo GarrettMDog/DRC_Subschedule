@@ -35,3 +35,10 @@ export const STATUS_HEX = {
   declined: '#B42318', // red — needs office attention
   cancelled: '#6B7280' // neutral gray — inactive, out of the way
 };
+
+// Jobs have their own, separate status vocabulary from assignments.
+export const JOB_STATUS_HEX = {
+  active: '#1E7C4D',
+  completed: '#6B7280',
+  cancelled: '#B42318'
+};
