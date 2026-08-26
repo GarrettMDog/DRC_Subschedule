@@ -6,6 +6,7 @@ import {
   Dropdown,
   Option,
   Badge,
+  Checkbox,
   MessageBar,
   MessageBarBody,
   OverlayDrawer,
@@ -17,7 +18,7 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange } from '../dateUtils';
-import { STATUS_HEX, JOB_STATUS_HEX } from '../theme';
+import { STATUS_HEX, materialsOrderedColor } from '../theme';
 
 const EMPTY_FORM = { name: '', address: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
@@ -86,7 +87,8 @@ export default function JobList() {
     setEditForm({
       name: job.name,
       address: job.address || '',
-      status: job.status || 'active'
+      status: job.status || 'active',
+      materials_ordered: !!job.materials_ordered
     });
   }
 
@@ -186,13 +188,14 @@ export default function JobList() {
           <div
             key={j.id}
             className="list-row"
-            style={{ '--status-color': JOB_STATUS_HEX[j.status] || '#6B7280' }}
+            style={{ '--status-color': materialsOrderedColor(j.materials_ordered) }}
             onClick={() => openJobDetail(j)}
           >
             <div>
               <strong>{j.name}</strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {j.address} {j.address && '·'} {STATUS_LABEL[j.status] || j.status}
+                {j.address} {j.address && '·'} {STATUS_LABEL[j.status] || j.status} ·{' '}
+                {j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'}
               </div>
             </div>
             <ChevronRight20Regular />
@@ -278,6 +281,11 @@ export default function JobList() {
                     <Option value="cancelled">Cancelled</Option>
                   </Dropdown>
                 </Field>
+                <Checkbox
+                  label="Materials ordered"
+                  checked={editForm.materials_ordered}
+                  onChange={(_, data) => setEditForm({ ...editForm, materials_ordered: data.checked })}
+                />
                 <Button appearance="primary" type="submit" disabled={saving}>
                   {saving ? 'Saving…' : 'Save changes'}
                 </Button>

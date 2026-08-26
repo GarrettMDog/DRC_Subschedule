@@ -14,7 +14,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { STATUS_HEX } from '../theme';
+import { materialsOrderedColor } from '../theme';
 import { formatDateRange } from '../dateUtils';
 
 const EMPTY_FORM = { company_name: '', trade: '', contact_name: '', email: '', phone: '' };
@@ -242,7 +242,7 @@ export default function SubcontractorDirectory() {
                       key={a.id}
                       className="status-card"
                       style={{
-                        '--status-color': STATUS_HEX[a.status] || '#6B7280',
+                        '--status-color': materialsOrderedColor(a.materials_ordered),
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',

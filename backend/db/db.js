@@ -29,6 +29,7 @@ db.exec(`
     start_date TEXT,
     end_date TEXT,
     status TEXT NOT NULL DEFAULT 'active',
+    materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
@@ -49,5 +50,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_assignments_sub ON assignments(subcontractor_id);
   CREATE INDEX IF NOT EXISTS idx_assignments_job ON assignments(job_id);
 `);
+
+// Safe migration: adds materials_ordered to any database that already
+// existed before this column was introduced. No-op on a fresh database,
+// since CREATE TABLE above already includes it. Same pattern as Bedrock's
+// safe editedAt migration.
+const jobColumns = db.prepare('PRAGMA table_info(jobs)').all();
+const hasMaterialsOrdered = jobColumns.some((col) => col.name === 'materials_ordered');
+if (!hasMaterialsOrdered) {
+  db.exec('ALTER TABLE jobs ADD COLUMN materials_ordered INTEGER NOT NULL DEFAULT 0');
+}
 
 module.exports = db;

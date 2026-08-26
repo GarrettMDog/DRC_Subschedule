@@ -42,3 +42,14 @@ export const JOB_STATUS_HEX = {
   completed: '#6B7280',
   cancelled: '#B42318'
 };
+
+/**
+ * Red until materials are marked ordered, then green. Used as the primary
+ * visual accent for jobs everywhere they appear (Jobs tab, Dashboard list
+ * and calendar, a subcontractor's job history) — deliberately takes over
+ * from status-based coloring for this accent, since materials-ordered is
+ * the thing that needs to catch someone's eye at a glance.
+ */
+export function materialsOrderedColor(materialsOrdered) {
+  return materialsOrdered ? '#1E7C4D' : '#B42318';
+}
