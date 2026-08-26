@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Button, Badge, Textarea, MessageBar, MessageBarBody } from '@fluentui/react-components';
+import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { STATUS_HEX } from '../theme';
 import { formatDateRange } from '../dateUtils';
 
-const STATUS_COLOR = {
-  pending: 'warning',
-  confirmed: 'success',
-  declined: 'danger',
-  cancelled: 'subtle'
+// Read-only for subs now — no confirm/decline action, so "pending" no longer
+// means "awaiting a response." Relabeled to avoid implying something's
+// outstanding when there's nothing left to do. Declined/confirmed are kept
+// here too in case any assignment already has one of those statuses from
+// before this change — nothing breaks for existing data.
+const STATUS_DISPLAY = {
+  pending: { label: 'Scheduled', color: 'success', hex: STATUS_HEX.confirmed },
+  confirmed: { label: 'Confirmed', color: 'success', hex: STATUS_HEX.confirmed },
+  declined: { label: 'Declined', color: 'danger', hex: STATUS_HEX.declined },
+  cancelled: { label: 'Cancelled', color: 'subtle', hex: STATUS_HEX.cancelled }
 };
 
 export default function SubSchedule() {
   const { linkToken } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [decliningId, setDecliningId] = useState(null);
-  const [declineReason, setDeclineReason] = useState('');
 
   async function load() {
     try {
@@ -31,18 +34,6 @@ export default function SubSchedule() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkToken]);
-
-  async function handleConfirm(id) {
-    await subApi.respondToAssignment(linkToken, id, 'confirmed');
-    await load();
-  }
-
-  async function handleDecline(id) {
-    await subApi.respondToAssignment(linkToken, id, 'declined', declineReason);
-    setDecliningId(null);
-    setDeclineReason('');
-    await load();
-  }
 
   if (error) {
     return (
@@ -62,53 +53,21 @@ export default function SubSchedule() {
       <p style={{ marginTop: 0, color: 'var(--colorNeutralForeground3)' }}>Your upcoming schedule</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data.assignments.map((a) => (
-          <div
-            key={a.id}
-            className="status-card"
-            style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280', padding: 14 }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <strong>{a.job_name}</strong>
-                <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>{a.job_address}</div>
-                <div style={{ fontSize: 13, marginTop: 4 }}>
-                  {formatDateRange(a.start_date, a.end_date)}
+        {data.assignments.map((a) => {
+          const display = STATUS_DISPLAY[a.status] || { label: a.status, color: 'informative', hex: '#6B7280' };
+          return (
+            <div key={a.id} className="status-card" style={{ '--status-color': display.hex, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <strong>{a.job_name}</strong>
+                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>{a.job_address}</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>{formatDateRange(a.start_date, a.end_date)}</div>
                 </div>
+                <Badge color={display.color}>{display.label}</Badge>
               </div>
-              <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
             </div>
-
-            {a.status === 'pending' && (
-              <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button size="large" appearance="primary" onClick={() => handleConfirm(a.id)}>
-                  Confirm
-                </Button>
-                <Button size="large" appearance="secondary" onClick={() => setDecliningId(a.id)}>
-                  Decline
-                </Button>
-              </div>
-            )}
-
-            {decliningId === a.id && (
-              <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-                <Textarea
-                  placeholder="Optional: let them know why (e.g. schedule conflict)"
-                  value={declineReason}
-                  onChange={(e) => setDeclineReason(e.target.value)}
-                />
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button appearance="primary" onClick={() => handleDecline(a.id)}>
-                    Send decline
-                  </Button>
-                  <Button appearance="subtle" onClick={() => setDecliningId(null)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
+          );
+        })}
         {data.assignments.length === 0 && <p>No assignments yet.</p>}
       </div>
     </div>
