@@ -6,12 +6,13 @@ import {
   Option,
   Input,
   Badge,
+  Checkbox,
   MessageBar,
   MessageBarBody
 } from '@fluentui/react-components';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { STATUS_HEX } from '../theme';
+import { STATUS_HEX, materialsOrderedColor } from '../theme';
 import { formatDateRange } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
@@ -77,6 +78,19 @@ export default function OfficeDashboard() {
       await loadAll();
     } catch (err) {
       setError(err.message || 'Could not save that assignment.');
+    }
+  }
+
+  // One-field quick toggle, saved immediately — no separate "Save" button
+  // needed for just flipping this checkbox from the dashboard panel.
+  async function toggleMaterialsOrdered(job) {
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.updateJob(token, job.id, { ...job, materials_ordered: !job.materials_ordered });
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'Could not update materials-ordered status.');
     }
   }
 
@@ -168,10 +182,17 @@ export default function OfficeDashboard() {
                       Clear
                     </Button>
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 16 }}>
+                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 12 }}>
                     {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
                     {selectedJobDetails.status}
                   </div>
+
+                  <Checkbox
+                    label="Materials ordered"
+                    checked={!!selectedJobDetails.materials_ordered}
+                    onChange={() => toggleMaterialsOrdered(selectedJobDetails)}
+                    style={{ marginBottom: 16 }}
+                  />
 
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
                     Assigned subcontractors ({jobAssignments.length})
@@ -270,7 +291,7 @@ export default function OfficeDashboard() {
                     key={a.id}
                     className="status-card"
                     style={{
-                      '--status-color': STATUS_HEX[a.status] || '#6B7280',
+                      '--status-color': materialsOrderedColor(a.materials_ordered),
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',

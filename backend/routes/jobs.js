@@ -5,7 +5,9 @@ const router = express.Router();
 
 // GET /api/jobs
 router.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM jobs ORDER BY start_date').all();
+  // Ordering by start_date stopped making sense once job-level dates were
+  // removed from the UI (the column's always null now) — order by name instead.
+  const rows = db.prepare('SELECT * FROM jobs ORDER BY name COLLATE NOCASE').all();
   res.json(rows);
 });
 
@@ -40,12 +42,13 @@ router.put('/:id', (req, res) => {
     address = existing.address,
     start_date = existing.start_date,
     end_date = existing.end_date,
-    status = existing.status
+    status = existing.status,
+    materials_ordered = existing.materials_ordered
   } = req.body;
 
   db.prepare(
-    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, status = ? WHERE id = ?`
-  ).run(name, address, start_date, end_date, status, id);
+    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, status = ?, materials_ordered = ? WHERE id = ?`
+  ).run(name, address, start_date, end_date, status, materials_ordered ? 1 : 0, id);
 
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });
