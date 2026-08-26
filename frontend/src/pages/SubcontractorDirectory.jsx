@@ -256,7 +256,9 @@ export default function SubcontractorDirectory() {
                           {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
                         </div>
                       </div>
-                      <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                      {a.status !== 'pending' && (
+                        <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                      )}
                     </div>
                   ))}
                   {subJobs.length === 0 && <p>No jobs assigned to this subcontractor yet.</p>}

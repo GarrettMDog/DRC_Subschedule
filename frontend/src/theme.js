@@ -30,7 +30,7 @@ export const subscheduleTheme = createLightTheme(brand);
 // and the sub-facing schedule page — kept outside the Fluent theme since
 // these are semantic (pending/confirmed/declined/cancelled), not brand.
 export const STATUS_HEX = {
-  pending: '#B7791F', // amber — still needs a response
+  pending: '#9CA3AF', // neutral — no longer actionable, just the default state
   confirmed: '#1E7C4D', // green — settled, good to go
   declined: '#B42318', // red — needs office attention
   cancelled: '#6B7280' // neutral gray — inactive, out of the way

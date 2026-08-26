@@ -305,7 +305,9 @@ export default function JobList() {
                           {formatDateRange(a.start_date, a.end_date)}
                         </div>
                       </div>
-                      <Badge color={ASSIGNMENT_STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                      {a.status !== 'pending' && (
+                        <Badge color={ASSIGNMENT_STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                      )}
                     </div>
                   ))}
                   {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}

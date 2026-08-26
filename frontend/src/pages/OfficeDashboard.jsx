@@ -187,9 +187,11 @@ export default function OfficeDashboard() {
                         <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
                           {formatDateRange(a.start_date, a.end_date)}
                         </div>
-                        <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
-                          {a.status}
-                        </Badge>
+                        {a.status !== 'pending' && (
+                          <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
+                            {a.status}
+                          </Badge>
+                        )}
                       </div>
                     ))}
                     {jobAssignments.length === 0 && (
@@ -296,7 +298,9 @@ export default function OfficeDashboard() {
                         {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
                       </div>
                     </div>
-                    <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                    {a.status !== 'pending' && (
+                      <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                    )}
                   </div>
                 );
               })}
