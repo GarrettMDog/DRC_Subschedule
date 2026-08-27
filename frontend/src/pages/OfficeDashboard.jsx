@@ -32,7 +32,7 @@ export default function OfficeDashboard() {
   const [conflictWarning, setConflictWarning] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'calendar'
+  const [view, setView] = useState('calendar'); // 'list' | 'calendar'
   const [labelMode, setLabelMode] = useState('subcontractor'); // 'subcontractor' | 'job'
   const [selectedJobId, setSelectedJobId] = useState(null);
 
