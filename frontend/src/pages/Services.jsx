@@ -30,6 +30,7 @@ export default function Services() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [assigneeFilter, setAssigneeFilter] = useState('all'); // 'all' | 'unassigned' | assignee id
 
   // To-do drawer: 'create' shows the add form, a todo object edits that
   // todo, null closes it.
@@ -165,7 +166,12 @@ export default function Services() {
   const isCreatingTodo = todoDrawer === 'create';
   const editingTodo = todoDrawer && todoDrawer !== 'create' ? todoDrawer : null;
 
-  const visibleTodos = hideCompleted ? todos.filter((t) => !t.completed) : todos;
+  let visibleTodos = hideCompleted ? todos.filter((t) => !t.completed) : todos;
+  if (assigneeFilter === 'unassigned') {
+    visibleTodos = visibleTodos.filter((t) => !t.assignee_id);
+  } else if (assigneeFilter !== 'all') {
+    visibleTodos = visibleTodos.filter((t) => String(t.assignee_id) === assigneeFilter);
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
@@ -189,6 +195,27 @@ export default function Services() {
         >
           <h3 style={{ margin: 0 }}>Services</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <Field label="Assigned to" style={{ minWidth: 160 }}>
+              <Dropdown
+                value={
+                  assigneeFilter === 'all'
+                    ? 'Everyone'
+                    : assigneeFilter === 'unassigned'
+                    ? 'Unassigned'
+                    : assignees.find((a) => String(a.id) === assigneeFilter)?.name || 'Everyone'
+                }
+                selectedOptions={[assigneeFilter]}
+                onOptionSelect={(_, data) => setAssigneeFilter(data.optionValue)}
+              >
+                <Option value="all">Everyone</Option>
+                <Option value="unassigned">Unassigned</Option>
+                {assignees.map((a) => (
+                  <Option key={a.id} value={String(a.id)}>
+                    {a.name}
+                  </Option>
+                ))}
+              </Dropdown>
+            </Field>
             <Checkbox
               label="Hide completed"
               checked={hideCompleted}
@@ -237,7 +264,12 @@ export default function Services() {
           {visibleTodos.length === 0 && todos.length === 0 && (
             <p>No to-dos yet. Click "Add to-do" to create one.</p>
           )}
-          {visibleTodos.length === 0 && todos.length > 0 && <p>Nothing outstanding — nice work.</p>}
+          {visibleTodos.length === 0 && todos.length > 0 && assigneeFilter === 'all' && (
+            <p>Nothing outstanding — nice work.</p>
+          )}
+          {visibleTodos.length === 0 && todos.length > 0 && assigneeFilter !== 'all' && (
+            <p>Nothing matches this filter.</p>
+          )}
         </div>
       </section>
 
