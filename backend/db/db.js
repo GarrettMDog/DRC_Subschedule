@@ -47,8 +47,34 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Formal directory of people to-dos can be assigned to. Deliberately its
+  -- own table, not reusing subcontractors — a to-do assignee might be office
+  -- staff, not a subcontractor at all, and there's no other staff directory
+  -- in the app yet.
+  CREATE TABLE IF NOT EXISTS service_assignees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    assignee_id INTEGER REFERENCES service_assignees(id) ON DELETE SET NULL,
+    job_id INTEGER REFERENCES jobs(id) ON DELETE SET NULL,
+    completed INTEGER NOT NULL DEFAULT 0,
+    due_date TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_assignments_sub ON assignments(subcontractor_id);
   CREATE INDEX IF NOT EXISTS idx_assignments_job ON assignments(job_id);
+  CREATE INDEX IF NOT EXISTS idx_todos_assignee ON todos(assignee_id);
+  CREATE INDEX IF NOT EXISTS idx_todos_job ON todos(job_id);
 `);
 
 // Safe migration: adds materials_ordered to any database that already

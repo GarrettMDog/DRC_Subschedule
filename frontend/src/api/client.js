@@ -33,7 +33,18 @@ export const api = {
   addAssignment: (token, data) => request('/api/assignments', { method: 'POST', body: data, token }),
   updateAssignment: (token, id, data) =>
     request(`/api/assignments/${id}`, { method: 'PUT', body: data, token }),
-  cancelAssignment: (token, id) => request(`/api/assignments/${id}`, { method: 'DELETE', token })
+  cancelAssignment: (token, id) => request(`/api/assignments/${id}`, { method: 'DELETE', token }),
+
+  getServiceAssignees: (token) => request('/api/service-assignees', { token }),
+  addServiceAssignee: (token, data) => request('/api/service-assignees', { method: 'POST', body: data, token }),
+  updateServiceAssignee: (token, id, data) =>
+    request(`/api/service-assignees/${id}`, { method: 'PUT', body: data, token }),
+  deleteServiceAssignee: (token, id) => request(`/api/service-assignees/${id}`, { method: 'DELETE', token }),
+
+  getTodos: (token) => request('/api/todos', { token }),
+  addTodo: (token, data) => request('/api/todos', { method: 'POST', body: data, token }),
+  updateTodo: (token, id, data) => request(`/api/todos/${id}`, { method: 'PUT', body: data, token }),
+  deleteTodo: (token, id) => request(`/api/todos/${id}`, { method: 'DELETE', token })
 };
 
 // --- Sub-facing calls (no MSAL token — gated by their link token in the URL) ---

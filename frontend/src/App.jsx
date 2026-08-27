@@ -6,6 +6,7 @@ import OfficeLayout from './components/OfficeLayout';
 import OfficeDashboard from './pages/OfficeDashboard';
 import SubcontractorDirectory from './pages/SubcontractorDirectory';
 import JobList from './pages/JobList';
+import Services from './pages/Services';
 import SubSchedule from './pages/SubSchedule';
 
 function SignInGate() {
@@ -37,6 +38,7 @@ export default function App() {
                   <Route path="/" element={<OfficeDashboard />} />
                   <Route path="/subcontractors" element={<SubcontractorDirectory />} />
                   <Route path="/jobs" element={<JobList />} />
+                  <Route path="/services" element={<Services />} />
                 </Routes>
               </OfficeLayout>
             </AuthenticatedTemplate>

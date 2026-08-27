@@ -17,7 +17,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { formatDateRange } from '../dateUtils';
+import { formatDateRange, formatDate } from '../dateUtils';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
 
 const EMPTY_FORM = { name: '', address: '' };
@@ -34,6 +34,7 @@ export default function JobList() {
   const { getToken } = useApiToken();
   const [jobs, setJobs] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,9 +54,14 @@ export default function JobList() {
     try {
       setError(null);
       const token = await getToken();
-      const [jobsData, assignmentsData] = await Promise.all([api.getJobs(token), api.getAssignments(token)]);
+      const [jobsData, assignmentsData, todosData] = await Promise.all([
+        api.getJobs(token),
+        api.getAssignments(token),
+        api.getTodos(token)
+      ]);
       setJobs(jobsData);
       setAssignments(assignmentsData);
+      setTodos(todosData);
     } catch (err) {
       setError(err.message || 'Something went wrong loading the job list.');
     } finally {
@@ -108,6 +114,19 @@ export default function JobList() {
     }
   }
 
+  // Quick-toggle from within the job view, same pattern as materials-ordered
+  // — auto-saves immediately, no separate Save button for just this.
+  async function toggleTodoCompleted(todo) {
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.updateTodo(token, todo.id, { ...todo, completed: !todo.completed });
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not update that to-do.');
+    }
+  }
+
   const visibleJobs = useMemo(() => {
     let result = jobs;
 
@@ -135,6 +154,10 @@ export default function JobList() {
   const isCreating = drawerContent === 'create';
   const editingJob = drawerContent && drawerContent !== 'create' ? drawerContent : null;
   const jobAssignments = editingJob ? assignments.filter((a) => a.job_id === editingJob.id) : [];
+  // Driven only by job_id and the to-do's own completed flag — never by the
+  // job's status, so a to-do on a "Completed" job still shows until it's
+  // checked off itself.
+  const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -319,6 +342,31 @@ export default function JobList() {
                     </div>
                   ))}
                   {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ marginBottom: 12 }}>
+                  Open to-dos on this job ({jobTodos.length})
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {jobTodos.map((t) => (
+                    <div
+                      key={t.id}
+                      className="status-card"
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}
+                    >
+                      <Checkbox checked={false} onChange={() => toggleTodoCompleted(t)} style={{ marginTop: 2 }} />
+                      <div>
+                        <strong>{t.title}</strong>
+                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                          {t.assignee_name || 'Unassigned'}
+                          {t.due_date && ` · Due ${formatDate(t.due_date)}`}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {jobTodos.length === 0 && <p>No open to-dos on this job.</p>}
                 </div>
               </div>
             </div>

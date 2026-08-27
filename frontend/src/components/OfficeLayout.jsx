@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 const NAV_ITEMS = [
   { value: '/', label: 'Dashboard' },
   { value: '/subcontractors', label: 'Subcontractors' },
-  { value: '/jobs', label: 'Jobs' }
+  { value: '/jobs', label: 'Jobs' },
+  { value: '/services', label: 'Services' }
 ];
 
 export default function OfficeLayout({ children }) {

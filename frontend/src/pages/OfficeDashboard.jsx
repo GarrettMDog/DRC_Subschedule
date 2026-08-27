@@ -13,7 +13,7 @@ import {
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
-import { formatDateRange } from '../dateUtils';
+import { formatDateRange, formatDate } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -28,6 +28,7 @@ export default function OfficeDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [subcontractors, setSubcontractors] = useState([]);
   const [jobs, setJobs] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [form, setForm] = useState({ subcontractor_id: '', job_id: '', start_date: '', end_date: '' });
   const [conflictWarning, setConflictWarning] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -40,14 +41,16 @@ export default function OfficeDashboard() {
     try {
       setError(null);
       const token = await getToken();
-      const [a, s, j] = await Promise.all([
+      const [a, s, j, t] = await Promise.all([
         api.getAssignments(token),
         api.getSubcontractors(token),
-        api.getJobs(token)
+        api.getJobs(token),
+        api.getTodos(token)
       ]);
       setAssignments(a);
       setSubcontractors(s);
       setJobs(j);
+      setTodos(t);
     } catch (err) {
       setError(err.message || 'Something went wrong loading the dashboard.');
     } finally {
@@ -91,6 +94,17 @@ export default function OfficeDashboard() {
       await loadAll();
     } catch (err) {
       setError(err.message || 'Could not update materials-ordered status.');
+    }
+  }
+
+  async function toggleTodoCompleted(todo) {
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.updateTodo(token, todo.id, { ...todo, completed: !todo.completed });
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'Could not update that to-do.');
     }
   }
 
@@ -166,6 +180,10 @@ export default function OfficeDashboard() {
             (() => {
               const selectedJobDetails = jobs.find((j) => j.id === selectedJobId);
               const jobAssignments = assignments.filter((a) => a.job_id === selectedJobId);
+              // Driven only by job_id and the to-do's own completed flag —
+              // never by the job's status, so a to-do on a "Completed" job
+              // still shows here until it's checked off itself.
+              const jobTodos = todos.filter((t) => t.job_id === selectedJobId && !t.completed);
               if (!selectedJobDetails) return null;
               return (
                 <div style={{ marginTop: 24 }}>
@@ -218,6 +236,37 @@ export default function OfficeDashboard() {
                     {jobAssignments.length === 0 && (
                       <p style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
                         No subcontractors assigned yet.
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>
+                    Open to-dos on this job ({jobTodos.length})
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {jobTodos.map((t) => (
+                      <div
+                        key={t.id}
+                        className="status-card"
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
+                      >
+                        <Checkbox
+                          checked={false}
+                          onChange={() => toggleTodoCompleted(t)}
+                          style={{ marginTop: 2 }}
+                        />
+                        <div>
+                          <strong>{t.title}</strong>
+                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                            {t.assignee_name || 'Unassigned'}
+                            {t.due_date && ` · Due ${formatDate(t.due_date)}`}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {jobTodos.length === 0 && (
+                      <p style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                        No open to-dos on this job.
                       </p>
                     )}
                   </div>
