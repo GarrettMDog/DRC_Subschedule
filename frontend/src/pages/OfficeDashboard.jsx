@@ -8,8 +8,13 @@ import {
   Badge,
   Checkbox,
   MessageBar,
-  MessageBarBody
+  MessageBarBody,
+  OverlayDrawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerHeaderTitle
 } from '@fluentui/react-components';
+import { Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
@@ -36,6 +41,13 @@ export default function OfficeDashboard() {
   const [view, setView] = useState('calendar'); // 'list' | 'calendar'
   const [labelMode, setLabelMode] = useState('subcontractor'); // 'subcontractor' | 'job'
   const [selectedJobId, setSelectedJobId] = useState(null);
+
+  // Editing an existing assignment's dates — there was never any UI for this
+  // before, only creating new assignments. Backend already supported it.
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [assignmentEditForm, setAssignmentEditForm] = useState({ start_date: '', end_date: '' });
+  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
   async function loadAll() {
     try {
@@ -105,6 +117,35 @@ export default function OfficeDashboard() {
       await loadAll();
     } catch (err) {
       setError(err.message || 'Could not update that to-do.');
+    }
+  }
+
+  function openEditAssignment(assignment) {
+    setAssignmentEditWarning(null);
+    setAssignmentEditForm({ start_date: assignment.start_date, end_date: assignment.end_date });
+    setEditingAssignment(assignment);
+  }
+
+  async function handleSaveAssignmentEdit(e) {
+    e.preventDefault();
+    setError(null);
+    setAssignmentEditWarning(null);
+    setSavingAssignment(true);
+    try {
+      const token = await getToken();
+      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, assignmentEditForm);
+      if (conflicts.length > 0) {
+        setAssignmentEditWarning(
+          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
+        );
+      } else {
+        setEditingAssignment(null);
+      }
+      await loadAll();
+    } catch (err) {
+      setError(err.message || 'Could not save changes to that assignment.');
+    } finally {
+      setSavingAssignment(false);
     }
   }
 
@@ -222,9 +263,16 @@ export default function OfficeDashboard() {
                         className="status-card"
                         style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280' }}
                       >
-                        <strong>{a.subcontractor_name}</strong>
-                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
-                          {formatDateRange(a.start_date, a.end_date)}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                          <div>
+                            <strong>{a.subcontractor_name}</strong>
+                            <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
+                              {formatDateRange(a.start_date, a.end_date)}
+                            </div>
+                          </div>
+                          <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
+                            Edit dates
+                          </Button>
                         </div>
                         {a.status !== 'pending' && (
                           <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
@@ -379,6 +427,53 @@ export default function OfficeDashboard() {
           )}
         </section>
       </div>
+
+      <OverlayDrawer
+        open={editingAssignment !== null}
+        onOpenChange={(_, { open }) => !open && setEditingAssignment(null)}
+        position="start"
+        size="small"
+      >
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                icon={<Dismiss24Regular />}
+                onClick={() => setEditingAssignment(null)}
+              />
+            }
+          >
+            Edit dates — {editingAssignment?.subcontractor_name}
+          </DrawerHeaderTitle>
+        </DrawerHeader>
+        <DrawerBody>
+          {assignmentEditWarning && (
+            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+              <MessageBarBody>{assignmentEditWarning}</MessageBarBody>
+            </MessageBar>
+          )}
+          <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
+            <Field label="Start date">
+              <Input
+                type="date"
+                value={assignmentEditForm.start_date}
+                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, start_date: e.target.value })}
+              />
+            </Field>
+            <Field label="End date">
+              <Input
+                type="date"
+                value={assignmentEditForm.end_date}
+                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, end_date: e.target.value })}
+              />
+            </Field>
+            <Button appearance="primary" type="submit" disabled={savingAssignment}>
+              {savingAssignment ? 'Saving…' : 'Save changes'}
+            </Button>
+          </form>
+        </DrawerBody>
+      </OverlayDrawer>
     </div>
   );
 }

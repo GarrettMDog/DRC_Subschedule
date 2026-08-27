@@ -217,8 +217,9 @@ export default function JobList() {
             <div>
               <strong>{j.name}</strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {j.address} {j.address && '·'} {STATUS_LABEL[j.status] || j.status} ·{' '}
-                {j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'}
+                {[j.address, STATUS_LABEL[j.status] || j.status, j.materials_ordered ? 'Materials ordered' : 'Materials not ordered']
+                  .filter(Boolean)
+                  .join(' · ')}
               </div>
             </div>
             <ChevronRight20Regular />
