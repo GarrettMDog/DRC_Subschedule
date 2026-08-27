@@ -37,8 +37,8 @@ export default function Services() {
   const [todoForm, setTodoForm] = useState(EMPTY_TODO_FORM);
   const [savingTodo, setSavingTodo] = useState(false);
 
-  // Assignee directory drawer — same pattern, smaller scope.
-  const [assigneeDrawer, setAssigneeDrawer] = useState(null);
+  // Assignee directory — create-only now, no visible list/edit/delete UI.
+  const [showAddAssignee, setShowAddAssignee] = useState(false);
   const [assigneeForm, setAssigneeForm] = useState(EMPTY_ASSIGNEE_FORM);
   const [savingAssignee, setSavingAssignee] = useState(false);
 
@@ -137,20 +137,11 @@ export default function Services() {
     }
   }
 
-  // --- Assignee directory ---
+  // --- Assignee directory (create-only) ---
 
   function openAssigneeCreate() {
     setAssigneeForm(EMPTY_ASSIGNEE_FORM);
-    setAssigneeDrawer('create');
-  }
-
-  function openAssigneeEdit(assignee) {
-    setAssigneeForm({
-      name: assignee.name,
-      email: assignee.email || '',
-      phone: assignee.phone || ''
-    });
-    setAssigneeDrawer(assignee);
+    setShowAddAssignee(true);
   }
 
   async function handleSaveAssignee(e) {
@@ -159,12 +150,8 @@ export default function Services() {
     setSavingAssignee(true);
     try {
       const token = await getToken();
-      if (assigneeDrawer === 'create') {
-        await api.addServiceAssignee(token, assigneeForm);
-      } else {
-        await api.updateServiceAssignee(token, assigneeDrawer.id, assigneeForm);
-      }
-      setAssigneeDrawer(null);
+      await api.addServiceAssignee(token, assigneeForm);
+      setShowAddAssignee(false);
       await load();
     } catch (err) {
       setError(err.message || 'Could not save that assignee.');
@@ -173,30 +160,10 @@ export default function Services() {
     }
   }
 
-  async function handleDeleteAssignee(assignee) {
-    if (
-      !window.confirm(
-        `Remove ${assignee.name} from the directory? Any to-dos assigned to them will become unassigned, not deleted.`
-      )
-    )
-      return;
-    setError(null);
-    try {
-      const token = await getToken();
-      await api.deleteServiceAssignee(token, assignee.id);
-      setAssigneeDrawer(null);
-      await load();
-    } catch (err) {
-      setError(err.message || 'Could not remove that assignee.');
-    }
-  }
-
   if (loading) return <p>Loading…</p>;
 
   const isCreatingTodo = todoDrawer === 'create';
   const editingTodo = todoDrawer && todoDrawer !== 'create' ? todoDrawer : null;
-  const isCreatingAssignee = assigneeDrawer === 'create';
-  const editingAssignee = assigneeDrawer && assigneeDrawer !== 'create' ? assigneeDrawer : null;
 
   const visibleTodos = hideCompleted ? todos.filter((t) => !t.completed) : todos;
 
@@ -227,6 +194,9 @@ export default function Services() {
               checked={hideCompleted}
               onChange={(_, data) => setHideCompleted(data.checked)}
             />
+            <Button appearance="secondary" onClick={openAssigneeCreate}>
+              + Add assignee
+            </Button>
             <Button appearance="primary" onClick={openTodoCreate}>
               + Add to-do
             </Button>
@@ -268,53 +238,6 @@ export default function Services() {
             <p>No to-dos yet. Click "Add to-do" to create one.</p>
           )}
           {visibleTodos.length === 0 && todos.length > 0 && <p>Nothing outstanding — nice work.</p>}
-        </div>
-      </section>
-
-      {/* --- Assignee directory --- */}
-      <section>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 12,
-            flexWrap: 'wrap',
-            gap: 8
-          }}
-        >
-          <h4 style={{ margin: 0 }}>Assignee directory</h4>
-          <Button size="small" appearance="secondary" onClick={openAssigneeCreate}>
-            + Add assignee
-          </Button>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {assignees.map((a) => (
-            <div
-              key={a.id}
-              className="status-card"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
-            >
-              <div>
-                <strong>{a.name}</strong>
-                <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                  {a.email} {a.email && a.phone && '·'} {a.phone}
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <Button size="small" appearance="secondary" onClick={() => openAssigneeEdit(a)}>
-                  Edit
-                </Button>
-                <Button
-                  size="small"
-                  appearance="subtle"
-                  icon={<Delete20Regular />}
-                  onClick={() => handleDeleteAssignee(a)}
-                />
-              </div>
-            </div>
-          ))}
-          {assignees.length === 0 && <p>No one in the directory yet. Click "Add assignee" to create one.</p>}
         </div>
       </section>
 
@@ -392,20 +315,20 @@ export default function Services() {
         </DrawerBody>
       </OverlayDrawer>
 
-      {/* --- Assignee create/edit drawer --- */}
+      {/* --- Add assignee drawer (create-only) --- */}
       <OverlayDrawer
-        open={assigneeDrawer !== null}
-        onOpenChange={(_, { open }) => !open && setAssigneeDrawer(null)}
+        open={showAddAssignee}
+        onOpenChange={(_, { open }) => !open && setShowAddAssignee(false)}
         position="start"
         size="small"
       >
         <DrawerHeader>
           <DrawerHeaderTitle
             action={
-              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setAssigneeDrawer(null)} />
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setShowAddAssignee(false)} />
             }
           >
-            {isCreatingAssignee ? 'Add an assignee' : 'Edit assignee'}
+            Add an assignee
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
@@ -429,13 +352,8 @@ export default function Services() {
               />
             </Field>
             <Button appearance="primary" type="submit" disabled={savingAssignee}>
-              {savingAssignee ? 'Saving…' : isCreatingAssignee ? 'Add assignee' : 'Save changes'}
+              {savingAssignee ? 'Saving…' : 'Add assignee'}
             </Button>
-            {editingAssignee && (
-              <Button appearance="subtle" onClick={() => handleDeleteAssignee(editingAssignee)}>
-                Remove from directory
-              </Button>
-            )}
           </form>
         </DrawerBody>
       </OverlayDrawer>
