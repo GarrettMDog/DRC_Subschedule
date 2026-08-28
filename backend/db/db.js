@@ -4,6 +4,7 @@ const path = require('path');
 // Same pattern as Bedrock: persistent disk on Render, mounted at DB_PATH.
 // Falls back to a local file for dev.
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'subschedule.db');
+console.log(`Using database at: ${DB_PATH}`);
 
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
