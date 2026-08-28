@@ -15,7 +15,7 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { materialsOrderedColor } from '../theme';
-import { formatDateRange } from '../dateUtils';
+import { formatDateRange, formatDateTime } from '../dateUtils';
 
 const EMPTY_FORM = { company_name: '', trade: '', contact_name: '', email: '', phone: '' };
 
@@ -110,6 +110,9 @@ export default function SubcontractorDirectory() {
               {s.trade && (
                 <span style={{ color: 'var(--colorNeutralForeground3)', fontSize: 13 }}> · {s.trade}</span>
               )}
+              <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                {s.last_viewed_at ? `Last viewed ${formatDateTime(s.last_viewed_at)}` : 'Never viewed their schedule'}
+              </div>
             </div>
             <ChevronRight20Regular />
           </div>
@@ -202,6 +205,11 @@ export default function SubcontractorDirectory() {
                   <Button size="small" appearance="secondary" onClick={() => copyLink(viewingSub)}>
                     {copiedId === viewingSub.id ? 'Copied!' : 'Copy link'}
                   </Button>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 8 }}>
+                  {viewingSub.last_viewed_at
+                    ? `Last viewed ${formatDateTime(viewingSub.last_viewed_at)}`
+                    : 'Never viewed their schedule yet'}
                 </div>
               </div>
 

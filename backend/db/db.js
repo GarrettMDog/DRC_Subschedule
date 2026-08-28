@@ -19,6 +19,7 @@ db.exec(`
     phone TEXT,
     active INTEGER NOT NULL DEFAULT 1,
     link_token TEXT UNIQUE NOT NULL,
+    last_viewed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -85,6 +86,12 @@ const jobColumns = db.prepare('PRAGMA table_info(jobs)').all();
 const hasMaterialsOrdered = jobColumns.some((col) => col.name === 'materials_ordered');
 if (!hasMaterialsOrdered) {
   db.exec('ALTER TABLE jobs ADD COLUMN materials_ordered INTEGER NOT NULL DEFAULT 0');
+}
+
+const subColumns = db.prepare('PRAGMA table_info(subcontractors)').all();
+const hasLastViewedAt = subColumns.some((col) => col.name === 'last_viewed_at');
+if (!hasLastViewedAt) {
+  db.exec('ALTER TABLE subcontractors ADD COLUMN last_viewed_at TEXT');
 }
 
 module.exports = db;

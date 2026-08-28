@@ -9,6 +9,14 @@ router.use(requireSubToken);
 
 // GET /api/my-schedule/:token — this sub's assignments only
 router.get('/', (req, res) => {
+  // Record that this sub actually opened their link. Deliberately only here,
+  // not in the shared middleware — this GET is the real "viewed their
+  // schedule" moment; the PUT below is a different action (and currently
+  // unreachable from the UI anyway).
+  db.prepare("UPDATE subcontractors SET last_viewed_at = datetime('now') WHERE id = ?").run(
+    req.subcontractor.id
+  );
+
   const rows = db
     .prepare(
       `SELECT a.*, j.name AS job_name, j.address AS job_address
