@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { STATUS_HEX } from '../theme';
-import { formatDateRange } from '../dateUtils';
+import { formatDateRange, formatTime } from '../dateUtils';
 
 // Read-only for subs now — no confirm/decline action, so "pending" no longer
 // means "awaiting a response." Relabeled to avoid implying something's
@@ -61,7 +61,10 @@ export default function SubSchedule() {
                 <div>
                   <strong>{a.job_name}</strong>
                   <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>{a.job_address}</div>
-                  <div style={{ fontSize: 13, marginTop: 4 }}>{formatDateRange(a.start_date, a.end_date)}</div>
+                  <div style={{ fontSize: 13, marginTop: 4 }}>
+                    {formatDateRange(a.start_date, a.end_date)}
+                    {a.job_time && ` · ${formatTime(a.job_time)}`}
+                  </div>
                 </div>
                 <Badge color={display.color}>{display.label}</Badge>
               </div>

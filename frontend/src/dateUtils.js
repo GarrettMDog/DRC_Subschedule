@@ -65,3 +65,18 @@ export function formatDateTime(sqliteTimestamp) {
     minute: '2-digit'
   });
 }
+
+/**
+ * Formats an HTML `<input type="time">` value ("HH:MM", 24-hour) as a
+ * friendly "h:mm AM/PM" string. Not a timestamp — no timezone conversion
+ * involved, same as start_date/end_date aren't timezone-converted. It's a
+ * plain wall-clock time (e.g. "job starts at 10am"), stored and displayed
+ * as-is regardless of who's viewing it or from where.
+ */
+export function formatTime(timeString) {
+  if (!timeString) return '';
+  const [hours, minutes] = timeString.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+}

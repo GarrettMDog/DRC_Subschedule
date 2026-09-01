@@ -42,13 +42,14 @@ router.put('/:id', (req, res) => {
     address = existing.address,
     start_date = existing.start_date,
     end_date = existing.end_date,
+    time = existing.time,
     status = existing.status,
     materials_ordered = existing.materials_ordered
   } = req.body;
 
   db.prepare(
-    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, status = ?, materials_ordered = ? WHERE id = ?`
-  ).run(name, address, start_date, end_date, status, materials_ordered ? 1 : 0, id);
+    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, status = ?, materials_ordered = ? WHERE id = ?`
+  ).run(name, address, start_date, end_date, time, status, materials_ordered ? 1 : 0, id);
 
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });

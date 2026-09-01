@@ -30,6 +30,7 @@ db.exec(`
     address TEXT,
     start_date TEXT,
     end_date TEXT,
+    time TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
@@ -93,6 +94,11 @@ const subColumns = db.prepare('PRAGMA table_info(subcontractors)').all();
 const hasLastViewedAt = subColumns.some((col) => col.name === 'last_viewed_at');
 if (!hasLastViewedAt) {
   db.exec('ALTER TABLE subcontractors ADD COLUMN last_viewed_at TEXT');
+}
+
+const hasJobTime = jobColumns.some((col) => col.name === 'time');
+if (!hasJobTime) {
+  db.exec('ALTER TABLE jobs ADD COLUMN time TEXT');
 }
 
 module.exports = db;

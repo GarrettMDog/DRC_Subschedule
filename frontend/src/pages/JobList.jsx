@@ -93,6 +93,7 @@ export default function JobList() {
     setEditForm({
       name: job.name,
       address: job.address || '',
+      time: job.time || '',
       status: job.status || 'active',
       materials_ordered: !!job.materials_ordered
     });
@@ -292,6 +293,13 @@ export default function JobList() {
                   <Input
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                  />
+                </Field>
+                <Field label="Time">
+                  <Input
+                    type="time"
+                    value={editForm.time}
+                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
                   />
                 </Field>
                 <Field label="Status">
