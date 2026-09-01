@@ -18,7 +18,7 @@ import { Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
-import { formatDateRange, formatDate } from '../dateUtils';
+import { formatDateRange, formatDate, formatTime } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -244,6 +244,7 @@ export default function OfficeDashboard() {
                   <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 12 }}>
                     {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
                     {selectedJobDetails.status}
+                    {selectedJobDetails.time && ` · ${formatTime(selectedJobDetails.time)}`}
                   </div>
 
                   <Checkbox

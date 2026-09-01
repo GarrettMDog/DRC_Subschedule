@@ -17,7 +17,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { formatDateRange, formatDate } from '../dateUtils';
+import { formatDateRange, formatDate, formatTime } from '../dateUtils';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
 
 const EMPTY_FORM = { name: '', address: '' };
@@ -218,7 +218,12 @@ export default function JobList() {
             <div>
               <strong>{j.name}</strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {[j.address, STATUS_LABEL[j.status] || j.status, j.materials_ordered ? 'Materials ordered' : 'Materials not ordered']
+                {[
+                  j.address,
+                  j.time ? formatTime(j.time) : null,
+                  STATUS_LABEL[j.status] || j.status,
+                  j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </div>
