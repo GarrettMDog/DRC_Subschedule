@@ -151,6 +151,14 @@ export default function OfficeDashboard() {
 
   if (loading) return <p>Loading…</p>;
 
+  // One sub per job, total — a job with any active assignment drops out of
+  // the picker. Cancelled/declined don't count as "occupying" the job, so
+  // it becomes available again once an assignment there is cancelled.
+  const assignedJobIds = new Set(
+    assignments.filter((a) => a.status !== 'cancelled' && a.status !== 'declined').map((a) => a.job_id)
+  );
+  const availableJobs = jobs.filter((j) => !assignedJobIds.has(j.id));
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {error && (
@@ -184,11 +192,11 @@ export default function OfficeDashboard() {
 
             <Field label="Job">
               <Dropdown
-                placeholder="Select a job"
-                value={jobs.find((j) => j.id === form.job_id)?.name || ''}
+                placeholder={availableJobs.length === 0 ? 'No unassigned jobs' : 'Select a job'}
+                value={availableJobs.find((j) => j.id === form.job_id)?.name || ''}
                 onOptionSelect={(_, data) => setForm({ ...form, job_id: Number(data.optionValue) })}
               >
-                {jobs.map((j) => (
+                {availableJobs.map((j) => (
                   <Option key={j.id} value={String(j.id)}>
                     {j.name}
                   </Option>
