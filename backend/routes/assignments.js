@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
        FROM assignments a
        JOIN subcontractors s ON s.id = a.subcontractor_id
        JOIN jobs j ON j.id = a.job_id
-       ORDER BY a.start_date`
+       ORDER BY a.start_date, CASE WHEN j.time IS NULL THEN 1 ELSE 0 END, j.time`
     )
     .all();
   res.json(rows);
