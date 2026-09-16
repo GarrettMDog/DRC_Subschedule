@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { STATUS_HEX } from '../theme';
-import { formatDateRange, formatTime } from '../dateUtils';
+import { formatDateRange, formatTime, formatDate } from '../dateUtils';
 
 // Read-only for subs now — no confirm/decline action, so "pending" no longer
 // means "awaiting a response." Relabeled to avoid implying something's
@@ -52,26 +52,60 @@ export default function SubSchedule() {
       <h2 style={{ marginBottom: 4 }}>{data.subcontractor.company_name}</h2>
       <p style={{ marginTop: 0, color: 'var(--colorNeutralForeground3)' }}>Your upcoming schedule</p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {data.assignments.map((a) => {
-          const display = STATUS_DISPLAY[a.status] || { label: a.status, color: 'informative', hex: '#6B7280' };
-          return (
-            <div key={a.id} className="status-card" style={{ '--status-color': display.hex, padding: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <strong>{a.job_name}</strong>
-                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>{a.job_address}</div>
-                  <div style={{ fontSize: 13, marginTop: 4 }}>
-                    {formatDateRange(a.start_date, a.end_date)}
-                    {a.job_time && ` · ${formatTime(a.job_time)}`}
-                  </div>
-                </div>
-                <Badge color={display.color}>{display.label}</Badge>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {(() => {
+          // Grouped by date only — this page always shows exactly one
+          // subcontractor's own assignments, so a subcontractor sub-group
+          // would just repeat their own name under every date for no reason.
+          const dateGroups = {};
+          for (const a of data.assignments) {
+            if (!dateGroups[a.start_date]) dateGroups[a.start_date] = [];
+            dateGroups[a.start_date].push(a);
+          }
+          const dateKeys = Object.keys(dateGroups);
+
+          if (dateKeys.length === 0) return <p>No assignments yet.</p>;
+
+          return dateKeys.map((dateKey) => (
+            <div key={dateKey}>
+              <h4
+                style={{
+                  margin: '0 0 10px',
+                  paddingBottom: 6,
+                  borderBottom: '1px solid var(--colorNeutralStroke2)'
+                }}
+              >
+                {formatDate(dateKey)}
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {dateGroups[dateKey].map((a) => {
+                  const display = STATUS_DISPLAY[a.status] || {
+                    label: a.status,
+                    color: 'informative',
+                    hex: '#6B7280'
+                  };
+                  return (
+                    <div key={a.id} className="status-card" style={{ '--status-color': display.hex, padding: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <strong>{a.job_name}</strong>
+                          <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                            {a.job_address}
+                          </div>
+                          <div style={{ fontSize: 13, marginTop: 4 }}>
+                            {formatDateRange(a.start_date, a.end_date)}
+                            {a.job_time && ` · ${formatTime(a.job_time)}`}
+                          </div>
+                        </div>
+                        <Badge color={display.color}>{display.label}</Badge>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          );
-        })}
-        {data.assignments.length === 0 && <p>No assignments yet.</p>}
+          ));
+        })()}
       </div>
     </div>
   );
