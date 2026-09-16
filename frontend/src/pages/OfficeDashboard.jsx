@@ -13,7 +13,7 @@ import {
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { materialsOrderedColor, formatJobType } from '../theme';
-import { formatDateRange, formatDateHeader, formatTime } from '../dateUtils';
+import { formatDateRange, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -248,10 +248,15 @@ export default function OfficeDashboard() {
                 // backend, and plain JS objects preserve insertion order for
                 // string keys, so building groups this way naturally keeps
                 // that same chronological order — no re-sorting needed.
-                const visibleAssignments =
-                  subFilterId === null
-                    ? assignments
-                    : assignments.filter((a) => a.subcontractor_id === subFilterId);
+                // List view only shows today and future — anything fully
+                // concluded (end_date before today) drops off. Filtered here
+                // in the frontend, not the backend query, since Calendar
+                // view uses that same unfiltered data and should keep
+                // showing history when you navigate to a past month.
+                const todayYMD = toYMD(new Date());
+                const visibleAssignments = assignments
+                  .filter((a) => a.end_date >= todayYMD)
+                  .filter((a) => subFilterId === null || a.subcontractor_id === subFilterId);
 
                 const dateGroups = {};
                 for (const a of visibleAssignments) {
@@ -264,7 +269,14 @@ export default function OfficeDashboard() {
                 const dateKeys = Object.keys(dateGroups);
 
                 if (dateKeys.length === 0) {
-                  return <p>{subFilterId === null ? 'No assignments yet.' : 'No assignments match this filter.'}</p>;
+                  let message = 'No assignments yet.';
+                  if (assignments.length > 0) {
+                    message =
+                      subFilterId === null
+                        ? 'Nothing upcoming — the schedule is clear from here on.'
+                        : 'No upcoming assignments match this filter.';
+                  }
+                  return <p>{message}</p>;
                 }
 
                 return dateKeys.map((dateKey) => (
