@@ -5,6 +5,7 @@ import {
   Input,
   Dropdown,
   Option,
+  Combobox,
   Badge,
   Checkbox,
   MessageBar,
@@ -17,7 +18,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { formatDateRange, formatDate, formatTime } from '../dateUtils';
+import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
 import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes } from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
@@ -63,10 +64,16 @@ export default function JobList() {
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
-  // Search / filter / sort — matters more as the job list grows.
+  // Search / status filter — still useful for narrowing which jobs show up
+  // at all, applied before the date/subcontractor grouping below.
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [sortBy, setSortBy] = useState('address');
+
+  // Subcontractor filter + date/subcontractor grouping — matches exactly
+  // how the Dashboard's list view used to organize things, moved here since
+  // that view no longer exists (Dashboard is calendar-only now).
+  const [subFilterId, setSubFilterId] = useState(null); // null = show everyone
+  const [subFilterText, setSubFilterText] = useState('');
 
   async function load() {
     try {
@@ -221,13 +228,8 @@ export default function JobList() {
       result = result.filter((j) => (j.address || '').toLowerCase().includes(q));
     }
 
-    const sorted = [...result].sort((a, b) => {
-      if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
-      return (a.address || '').localeCompare(b.address || '');
-    });
-
-    return sorted;
-  }, [jobs, statusFilter, searchText, sortBy]);
+    return [...result].sort((a, b) => (a.address || '').localeCompare(b.address || ''));
+  }, [jobs, statusFilter, searchText]);
 
   if (loading) return <p>Loading…</p>;
 
@@ -244,6 +246,34 @@ export default function JobList() {
   // job's status, so a to-do on a "Completed" job still shows until it's
   // checked off itself.
   const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
+
+  function renderJobRow(j) {
+    return (
+      <div
+        key={j.id}
+        className="list-row"
+        style={{ '--status-color': materialsOrderedColor(j.materials_ordered) }}
+        onClick={() => openJobDetail(j)}
+      >
+        <div>
+          <strong>
+            {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
+            {j.address}
+          </strong>
+          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+            {[
+              j.time ? formatTime(j.time) : null,
+              STATUS_LABEL[j.status] || j.status,
+              j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </div>
+        </div>
+        <ChevronRight20Regular />
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -280,48 +310,112 @@ export default function JobList() {
             <Option value="cancelled">Cancelled</Option>
           </Dropdown>
         </Field>
-        <Field label="Sort by">
-          <Dropdown
-            value={sortBy === 'status' ? 'Status' : 'Address (A–Z)'}
-            selectedOptions={[sortBy]}
-            onOptionSelect={(_, data) => setSortBy(data.optionValue)}
+        <Field label="Subcontractor" style={{ minWidth: 200 }}>
+          <Combobox
+            placeholder="Filter by subcontractor…"
+            value={subFilterText}
+            onInput={(e) => setSubFilterText(e.target.value)}
+            onOptionSelect={(_, data) => {
+              setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
+              setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
+            }}
           >
-            <Option value="address">Address (A–Z)</Option>
-            <Option value="status">Status</Option>
-          </Dropdown>
+            <Option value="all">All subcontractors</Option>
+            {subcontractors
+              .filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()))
+              .map((s) => (
+                <Option key={s.id} value={String(s.id)} text={s.company_name}>
+                  {s.company_name}
+                </Option>
+              ))}
+          </Combobox>
         </Field>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {visibleJobs.map((j) => (
-          <div
-            key={j.id}
-            className="list-row"
-            style={{ '--status-color': materialsOrderedColor(j.materials_ordered) }}
-            onClick={() => openJobDetail(j)}
-          >
-            <div>
-              <strong>
-                {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
-                {j.address}
-              </strong>
-              <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                {[
-                  j.time ? formatTime(j.time) : null,
-                  STATUS_LABEL[j.status] || j.status,
-                  j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </div>
-            </div>
-            <ChevronRight20Regular />
-          </div>
-        ))}
-        {visibleJobs.length === 0 && jobs.length > 0 && (
-          <p>No jobs match your search/filter.</p>
-        )}
-        {jobs.length === 0 && <p>No jobs yet. Click "Add job" to create one.</p>}
+      <div>
+        {(() => {
+          // Each visible job's active assignment, if any — one sub per job,
+          // so at most one active assignment is ever relevant here.
+          const jobsWithAssignment = visibleJobs.map((j) => ({
+            job: j,
+            activeAssignment: assignments.find(
+              (a) => a.job_id === j.id && a.status !== 'cancelled' && a.status !== 'declined'
+            )
+          }));
+
+          // Filtering by a specific subcontractor hides everything else,
+          // unassigned jobs included, same as the Dashboard's old behavior.
+          const filtered =
+            subFilterId === null
+              ? jobsWithAssignment
+              : jobsWithAssignment.filter((x) => x.activeAssignment?.subcontractor_id === subFilterId);
+
+          const unassigned = filtered.filter((x) => !x.activeAssignment).map((x) => x.job);
+          const assigned = filtered.filter((x) => x.activeAssignment);
+
+          // Master group: date. Sub-group: subcontractor — same structure
+          // the Dashboard's list view used, built from jobs instead of
+          // assignments since this page lists jobs.
+          const dateGroups = {};
+          for (const { job, activeAssignment } of assigned) {
+            const date = activeAssignment.start_date;
+            const subName = activeAssignment.subcontractor_name;
+            if (!dateGroups[date]) dateGroups[date] = {};
+            if (!dateGroups[date][subName]) dateGroups[date][subName] = [];
+            dateGroups[date][subName].push(job);
+          }
+          const dateKeys = Object.keys(dateGroups).sort();
+
+          if (unassigned.length === 0 && dateKeys.length === 0) {
+            if (jobs.length === 0) return <p>No jobs yet. Click "Add job" to create one.</p>;
+            return <p>No jobs match your search/filter.</p>;
+          }
+
+          return (
+            <>
+              {unassigned.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <h4 style={{ margin: '0 0 10px' }}>Unassigned ({unassigned.length})</h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {unassigned.map((j) => renderJobRow(j))}
+                  </div>
+                </div>
+              )}
+              {dateKeys.map((dateKey) => (
+                <div key={dateKey} style={{ marginBottom: 20 }}>
+                  <h4
+                    style={{
+                      margin: '0 0 10px',
+                      paddingBottom: 6,
+                      borderBottom: '1px solid var(--colorNeutralStroke2)'
+                    }}
+                  >
+                    {formatDateHeader(dateKey)}
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
+                      <div key={subName}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: 'var(--colorNeutralForeground2)',
+                            marginBottom: 6
+                          }}
+                        >
+                          {subName}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {jobsForSub.map((j) => renderJobRow(j))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          );
+        })()}
       </div>
 
       {/* Small side panel for creating a new job */}
