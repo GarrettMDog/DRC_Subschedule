@@ -3,6 +3,18 @@ const db = require('../db/db');
 
 const router = express.Router();
 
+// job_type now supports multiple values (e.g. a job that's both Prep and
+// Pour). Frontend sends an array from the multiselect control; stored as a
+// plain comma-separated string in the same column — no schema change
+// needed for a fixed set of 3 possible values.
+function normalizeJobType(value) {
+  if (Array.isArray(value)) {
+    const joined = value.filter(Boolean).join(',');
+    return joined || null;
+  }
+  return value || null;
+}
+
 // GET /api/jobs
 router.get('/', (req, res) => {
   const rows = db.prepare('SELECT * FROM jobs ORDER BY address COLLATE NOCASE').all();
@@ -29,7 +41,7 @@ router.post('/', (req, res) => {
       `INSERT INTO jobs (name, address, start_date, end_date, job_type, created_by)
        VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(name, address, start_date || null, end_date || null, job_type || null, createdBy);
+    .run(name, address, start_date || null, end_date || null, normalizeJobType(job_type), createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -55,7 +67,7 @@ router.put('/:id', (req, res) => {
 
   db.prepare(
     `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, status = ?, materials_ordered = ? WHERE id = ?`
-  ).run(name, address, start_date, end_date, time, job_type, status, materials_ordered ? 1 : 0, id);
+  ).run(name, address, start_date, end_date, time, normalizeJobType(job_type), status, materials_ordered ? 1 : 0, id);
 
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });

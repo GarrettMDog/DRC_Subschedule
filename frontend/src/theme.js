@@ -53,3 +53,28 @@ export const JOB_STATUS_HEX = {
 export function materialsOrderedColor(materialsOrdered) {
   return materialsOrdered ? '#1E7C4D' : '#B42318';
 }
+
+/**
+ * A job can now have more than one type (e.g. both Prep and Pour). Stored as
+ * a plain comma-separated string in the same `job_type` column — no schema
+ * change needed for what's a fixed, tiny set of values (Box/Prep/Pour).
+ * Formats for display: "Prep,Pour" -> "Prep + Pour".
+ */
+export function formatJobType(jobType) {
+  if (!jobType) return '';
+  return jobType
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .join(' + ');
+}
+
+/** Inverse of the above — splits the stored string back into an array of
+ * individual type values, for populating a multiselect control. */
+export function parseJobTypes(jobType) {
+  if (!jobType) return [];
+  return jobType
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean);
+}

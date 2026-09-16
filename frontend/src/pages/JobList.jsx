@@ -18,10 +18,10 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange, formatDate, formatTime } from '../dateUtils';
-import { STATUS_HEX, materialsOrderedColor } from '../theme';
+import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes } from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
-const EMPTY_FORM = { address: '', job_type: '' };
+const EMPTY_FORM = { address: '', job_type: [] };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 
@@ -95,7 +95,7 @@ export default function JobList() {
     setEditForm({
       address: job.address || '',
       time: job.time || '',
-      job_type: job.job_type || '',
+      job_type: parseJobTypes(job.job_type),
       status: job.status || 'active',
       materials_ordered: !!job.materials_ordered
     });
@@ -217,7 +217,7 @@ export default function JobList() {
           >
             <div>
               <strong>
-                {j.job_type ? `${j.job_type} — ` : ''}
+                {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
                 {j.address}
               </strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
@@ -262,10 +262,11 @@ export default function JobList() {
             </Field>
             <Field label="Job type" required>
               <Dropdown
-                placeholder="Select a type"
-                value={form.job_type}
-                selectedOptions={form.job_type ? [form.job_type] : []}
-                onOptionSelect={(_, data) => setForm({ ...form, job_type: data.optionValue })}
+                placeholder="Select one or more"
+                multiselect
+                value={form.job_type.join(', ')}
+                selectedOptions={form.job_type}
+                onOptionSelect={(_, data) => setForm({ ...form, job_type: data.selectedOptions })}
               >
                 {JOB_TYPE_OPTIONS.map((t) => (
                   <Option key={t} value={t}>
@@ -294,7 +295,7 @@ export default function JobList() {
               <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setDrawerContent(null)} />
             }
           >
-            {editingJob && (editingJob.job_type ? `${editingJob.job_type} — ` : '') + (editingJob?.address || '')}
+            {editingJob && (editingJob.job_type ? `${formatJobType(editingJob.job_type)} — ` : '') + (editingJob?.address || '')}
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
@@ -309,10 +310,11 @@ export default function JobList() {
                 </Field>
                 <Field label="Job type" required>
                   <Dropdown
-                    placeholder="Select a type"
-                    value={editForm.job_type}
-                    selectedOptions={editForm.job_type ? [editForm.job_type] : []}
-                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.optionValue })}
+                    placeholder="Select one or more"
+                    multiselect
+                    value={editForm.job_type.join(', ')}
+                    selectedOptions={editForm.job_type}
+                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.selectedOptions })}
                   >
                     {JOB_TYPE_OPTIONS.map((t) => (
                       <Option key={t} value={t}>

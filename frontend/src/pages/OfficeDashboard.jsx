@@ -18,7 +18,7 @@ import {
 import { Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { STATUS_HEX, materialsOrderedColor } from '../theme';
+import { STATUS_HEX, materialsOrderedColor, formatJobType } from '../theme';
 import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
@@ -248,7 +248,7 @@ export default function OfficeDashboard() {
                     }}
                   >
                     <h4 style={{ margin: 0 }}>
-                      {selectedJobDetails.job_type ? `${selectedJobDetails.job_type} — ` : ''}
+                      {selectedJobDetails.job_type ? `${formatJobType(selectedJobDetails.job_type)} — ` : ''}
                       {selectedJobDetails.address}
                     </h4>
                     <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
@@ -493,7 +493,7 @@ export default function OfficeDashboard() {
                                 >
                                   <div>
                                     <strong>
-                                      {a.job_type ? `${a.job_type} — ` : ''}
+                                      {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
                                       {a.job_address}
                                     </strong>
                                     <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>

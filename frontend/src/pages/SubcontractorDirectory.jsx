@@ -14,7 +14,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { materialsOrderedColor } from '../theme';
+import { materialsOrderedColor, formatJobType } from '../theme';
 import { formatDateRange, formatDateTime } from '../dateUtils';
 
 const EMPTY_FORM = { company_name: '', trade: '', contact_name: '', email: '', phone: '' };
@@ -260,7 +260,7 @@ export default function SubcontractorDirectory() {
                     >
                       <div>
                         <strong>
-                          {a.job_type ? `${a.job_type} — ` : ''}
+                          {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
                           {a.job_address}
                         </strong>
                         <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>

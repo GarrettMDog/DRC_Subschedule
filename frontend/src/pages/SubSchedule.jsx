@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
-import { STATUS_HEX } from '../theme';
+import { STATUS_HEX, formatJobType } from '../theme';
 import { formatDateRange, formatTime, formatDateHeader } from '../dateUtils';
 
 // Read-only for subs now — no confirm/decline action, so "pending" no longer
@@ -89,7 +89,7 @@ export default function SubSchedule() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
                           <strong>
-                            {a.job_type ? `${a.job_type} — ` : ''}
+                            {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
                             {a.job_address}
                           </strong>
                           <div style={{ fontSize: 13, marginTop: 4 }}>
