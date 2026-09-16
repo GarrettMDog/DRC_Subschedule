@@ -7,19 +7,13 @@ import {
   Combobox,
   Input,
   Badge,
-  Checkbox,
   MessageBar,
-  MessageBarBody,
-  OverlayDrawer,
-  DrawerBody,
-  DrawerHeader,
-  DrawerHeaderTitle
+  MessageBarBody
 } from '@fluentui/react-components';
-import { Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { STATUS_HEX, materialsOrderedColor, formatJobType } from '../theme';
-import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
+import { materialsOrderedColor, formatJobType } from '../theme';
+import { formatDateRange, formatDateHeader, formatTime } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -34,7 +28,6 @@ export default function OfficeDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [subcontractors, setSubcontractors] = useState([]);
   const [jobs, setJobs] = useState([]);
-  const [todos, setTodos] = useState([]);
   const [form, setForm] = useState({ subcontractor_id: '', job_id: '', start_date: '', end_date: '' });
   const [conflictWarning, setConflictWarning] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -45,27 +38,18 @@ export default function OfficeDashboard() {
   const [subFilterId, setSubFilterId] = useState(null); // null = show everyone
   const [subFilterText, setSubFilterText] = useState('');
 
-  // Editing an existing assignment's dates — there was never any UI for this
-  // before, only creating new assignments. Backend already supported it.
-  const [editingAssignment, setEditingAssignment] = useState(null);
-  const [assignmentEditForm, setAssignmentEditForm] = useState({ start_date: '', end_date: '' });
-  const [savingAssignment, setSavingAssignment] = useState(false);
-  const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
-
   async function loadAll() {
     try {
       setError(null);
       const token = await getToken();
-      const [a, s, j, t] = await Promise.all([
+      const [a, s, j] = await Promise.all([
         api.getAssignments(token),
         api.getSubcontractors(token),
-        api.getJobs(token),
-        api.getTodos(token)
+        api.getJobs(token)
       ]);
       setAssignments(a);
       setSubcontractors(s);
       setJobs(j);
-      setTodos(t);
     } catch (err) {
       setError(err.message || 'Something went wrong loading the dashboard.');
     } finally {
@@ -96,59 +80,6 @@ export default function OfficeDashboard() {
       await loadAll();
     } catch (err) {
       setError(err.message || 'Could not save that assignment.');
-    }
-  }
-
-  // One-field quick toggle, saved immediately — no separate "Save" button
-  // needed for just flipping this checkbox from the dashboard panel.
-  async function toggleMaterialsOrdered(job) {
-    setError(null);
-    try {
-      const token = await getToken();
-      await api.updateJob(token, job.id, { ...job, materials_ordered: !job.materials_ordered });
-      await loadAll();
-    } catch (err) {
-      setError(err.message || 'Could not update materials-ordered status.');
-    }
-  }
-
-  async function toggleTodoCompleted(todo) {
-    setError(null);
-    try {
-      const token = await getToken();
-      await api.updateTodo(token, todo.id, { ...todo, completed: !todo.completed });
-      await loadAll();
-    } catch (err) {
-      setError(err.message || 'Could not update that to-do.');
-    }
-  }
-
-  function openEditAssignment(assignment) {
-    setAssignmentEditWarning(null);
-    setAssignmentEditForm({ start_date: assignment.start_date, end_date: assignment.end_date });
-    setEditingAssignment(assignment);
-  }
-
-  async function handleSaveAssignmentEdit(e) {
-    e.preventDefault();
-    setError(null);
-    setAssignmentEditWarning(null);
-    setSavingAssignment(true);
-    try {
-      const token = await getToken();
-      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, assignmentEditForm);
-      if (conflicts.length > 0) {
-        setAssignmentEditWarning(
-          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
-        );
-      } else {
-        setEditingAssignment(null);
-      }
-      await loadAll();
-    } catch (err) {
-      setError(err.message || 'Could not save changes to that assignment.');
-    } finally {
-      setSavingAssignment(false);
     }
   }
 
@@ -227,114 +158,6 @@ export default function OfficeDashboard() {
               Assign
             </Button>
           </form>
-
-          {selectedJobId &&
-            (() => {
-              const selectedJobDetails = jobs.find((j) => j.id === selectedJobId);
-              const jobAssignments = assignments.filter((a) => a.job_id === selectedJobId);
-              // Driven only by job_id and the to-do's own completed flag —
-              // never by the job's status, so a to-do on a "Completed" job
-              // still shows here until it's checked off itself.
-              const jobTodos = todos.filter((t) => t.job_id === selectedJobId && !t.completed);
-              if (!selectedJobDetails) return null;
-              return (
-                <div style={{ marginTop: 24 }}>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 8
-                    }}
-                  >
-                    <h4 style={{ margin: 0 }}>
-                      {selectedJobDetails.job_type ? `${formatJobType(selectedJobDetails.job_type)} — ` : ''}
-                      {selectedJobDetails.address}
-                    </h4>
-                    <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
-                      Clear
-                    </Button>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 12 }}>
-                    {selectedJobDetails.status}
-                    {selectedJobDetails.time && ` · ${formatTime(selectedJobDetails.time)}`}
-                  </div>
-
-                  <Checkbox
-                    label="Materials ordered"
-                    checked={!!selectedJobDetails.materials_ordered}
-                    onChange={() => toggleMaterialsOrdered(selectedJobDetails)}
-                    style={{ marginBottom: 16 }}
-                  />
-
-                  <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8 }}>
-                    Assigned subcontractors ({jobAssignments.length})
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {jobAssignments.map((a) => (
-                      <div
-                        key={a.id}
-                        className="status-card"
-                        style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280' }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                          <div>
-                            <strong>{a.subcontractor_name}</strong>
-                            <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
-                              {formatDateRange(a.start_date, a.end_date)}
-                            </div>
-                          </div>
-                          <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
-                            Edit dates
-                          </Button>
-                        </div>
-                        {a.status !== 'pending' && (
-                          <Badge color={STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
-                            {a.status}
-                          </Badge>
-                        )}
-                      </div>
-                    ))}
-                    {jobAssignments.length === 0 && (
-                      <p style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
-                        No subcontractors assigned yet.
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={{ fontSize: 12, fontWeight: 600, marginTop: 16, marginBottom: 8 }}>
-                    Open to-dos on this job ({jobTodos.length})
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {jobTodos.map((t) => (
-                      <div
-                        key={t.id}
-                        className="status-card"
-                        style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
-                      >
-                        <Checkbox
-                          checked={false}
-                          onChange={() => toggleTodoCompleted(t)}
-                          style={{ marginTop: 2 }}
-                        />
-                        <div>
-                          <strong>{t.title}</strong>
-                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                            {t.assignee_name || 'Unassigned'}
-                            {t.due_date && ` · Due ${formatDate(t.due_date)}`}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {jobTodos.length === 0 && (
-                      <p style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
-                        No open to-dos on this job.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
         </section>
 
         <section>
@@ -518,53 +341,6 @@ export default function OfficeDashboard() {
           )}
         </section>
       </div>
-
-      <OverlayDrawer
-        open={editingAssignment !== null}
-        onOpenChange={(_, { open }) => !open && setEditingAssignment(null)}
-        position="start"
-        size="small"
-      >
-        <DrawerHeader>
-          <DrawerHeaderTitle
-            action={
-              <Button
-                appearance="subtle"
-                icon={<Dismiss24Regular />}
-                onClick={() => setEditingAssignment(null)}
-              />
-            }
-          >
-            Edit dates — {editingAssignment?.subcontractor_name}
-          </DrawerHeaderTitle>
-        </DrawerHeader>
-        <DrawerBody>
-          {assignmentEditWarning && (
-            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-              <MessageBarBody>{assignmentEditWarning}</MessageBarBody>
-            </MessageBar>
-          )}
-          <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Start date">
-              <Input
-                type="date"
-                value={assignmentEditForm.start_date}
-                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, start_date: e.target.value })}
-              />
-            </Field>
-            <Field label="End date">
-              <Input
-                type="date"
-                value={assignmentEditForm.end_date}
-                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, end_date: e.target.value })}
-              />
-            </Field>
-            <Button appearance="primary" type="submit" disabled={savingAssignment}>
-              {savingAssignment ? 'Saving…' : 'Save changes'}
-            </Button>
-          </form>
-        </DrawerBody>
-      </OverlayDrawer>
     </div>
   );
 }
