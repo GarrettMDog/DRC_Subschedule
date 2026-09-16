@@ -18,7 +18,7 @@ import { Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
-import { formatDateRange, formatDate, formatTime } from '../dateUtils';
+import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
 import AssignmentCalendar from '../components/AssignmentCalendar';
 
 const STATUS_COLOR = {
@@ -418,7 +418,7 @@ export default function OfficeDashboard() {
                         borderBottom: '1px solid var(--colorNeutralStroke2)'
                       }}
                     >
-                      {formatDate(dateKey)}
+                      {formatDateHeader(dateKey)}
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                       {Object.entries(dateGroups[dateKey]).map(([subName, subAssignments]) => (

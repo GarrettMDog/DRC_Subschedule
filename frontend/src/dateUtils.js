@@ -80,3 +80,32 @@ export function formatTime(timeString) {
   const displayHours = hours % 12 === 0 ? 12 : hours % 12;
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
 }
+
+function ordinalSuffix(day) {
+  if (day >= 11 && day <= 13) return 'th'; // 11th/12th/13th are the exception to the pattern below
+  switch (day % 10) {
+    case 1:
+      return 'st';
+    case 2:
+      return 'nd';
+    case 3:
+      return 'rd';
+    default:
+      return 'th';
+  }
+}
+
+/**
+ * Formats a YYYY-MM-DD date string as a full section-header style date:
+ * "Thursday, September 18th". Distinct from formatDate above — that one is
+ * for compact inline references (mm/dd/yy or "Today"); this is specifically
+ * for group/section headers where a fuller, more readable date reads better.
+ */
+export function formatDateHeader(dateString) {
+  if (!dateString) return '';
+  const date = parseLocalDate(dateString);
+  const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
+  const month = date.toLocaleDateString(undefined, { month: 'long' });
+  const day = date.getDate();
+  return `${weekday}, ${month} ${day}${ordinalSuffix(day)}`;
+}

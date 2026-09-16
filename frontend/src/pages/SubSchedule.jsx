@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { STATUS_HEX } from '../theme';
-import { formatDateRange, formatTime, formatDate } from '../dateUtils';
+import { formatDateRange, formatTime, formatDateHeader } from '../dateUtils';
 
 // Read-only for subs now — no confirm/decline action, so "pending" no longer
 // means "awaiting a response." Relabeled to avoid implying something's
@@ -75,7 +75,7 @@ export default function SubSchedule() {
                   borderBottom: '1px solid var(--colorNeutralStroke2)'
                 }}
               >
-                {formatDate(dateKey)}
+                {formatDateHeader(dateKey)}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {dateGroups[dateKey].map((a) => {
