@@ -22,6 +22,7 @@ import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes } from 
 
 // No more separate "Job name" concept — address is the sole identifier now.
 const EMPTY_FORM = { address: '', job_type: [] };
+const EMPTY_ASSIGN_FORM = { subcontractor_id: '', start_date: '', end_date: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 
@@ -37,6 +38,7 @@ export default function JobList() {
   const [jobs, setJobs] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [todos, setTodos] = useState([]);
+  const [subcontractors, setSubcontractors] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,6 +49,20 @@ export default function JobList() {
   const [editForm, setEditForm] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  // Assigning a subcontractor to this job — moved here from the Dashboard,
+  // so it lives right alongside everything else about the job.
+  const [assignForm, setAssignForm] = useState(EMPTY_ASSIGN_FORM);
+  const [assignConflictWarning, setAssignConflictWarning] = useState(null);
+  const [assigning, setAssigning] = useState(false);
+
+  // Editing an existing assignment's dates — this had nowhere to live after
+  // the Dashboard's detail panel was removed. Brought back here since
+  // assignment management now lives entirely on the job itself.
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [assignmentEditForm, setAssignmentEditForm] = useState({ start_date: '', end_date: '' });
+  const [savingAssignment, setSavingAssignment] = useState(false);
+  const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
+
   // Search / filter / sort — matters more as the job list grows.
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
@@ -56,14 +72,16 @@ export default function JobList() {
     try {
       setError(null);
       const token = await getToken();
-      const [jobsData, assignmentsData, todosData] = await Promise.all([
+      const [jobsData, assignmentsData, todosData, subsData] = await Promise.all([
         api.getJobs(token),
         api.getAssignments(token),
-        api.getTodos(token)
+        api.getTodos(token),
+        api.getSubcontractors(token)
       ]);
       setJobs(jobsData);
       setAssignments(assignmentsData);
       setTodos(todosData);
+      setSubcontractors(subsData);
     } catch (err) {
       setError(err.message || 'Something went wrong loading the job list.');
     } finally {
@@ -99,6 +117,8 @@ export default function JobList() {
       status: job.status || 'active',
       materials_ordered: !!job.materials_ordered
     });
+    setAssignForm(EMPTY_ASSIGN_FORM);
+    setAssignConflictWarning(null);
   }
 
   async function handleSaveEdit(e) {
@@ -114,6 +134,57 @@ export default function JobList() {
       setError(err.message || 'Could not save changes to that job.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAssignSub(e) {
+    e.preventDefault();
+    setError(null);
+    setAssignConflictWarning(null);
+    setAssigning(true);
+    try {
+      const token = await getToken();
+      const { conflicts } = await api.addAssignment(token, { ...assignForm, job_id: drawerContent.id });
+      if (conflicts.length > 0) {
+        setAssignConflictWarning(
+          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway — review below.`
+        );
+      }
+      setAssignForm(EMPTY_ASSIGN_FORM);
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not assign that subcontractor.');
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  function openEditAssignment(assignment) {
+    setAssignmentEditWarning(null);
+    setAssignmentEditForm({ start_date: assignment.start_date, end_date: assignment.end_date });
+    setEditingAssignment(assignment);
+  }
+
+  async function handleSaveAssignmentEdit(e) {
+    e.preventDefault();
+    setError(null);
+    setAssignmentEditWarning(null);
+    setSavingAssignment(true);
+    try {
+      const token = await getToken();
+      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, assignmentEditForm);
+      if (conflicts.length > 0) {
+        setAssignmentEditWarning(
+          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
+        );
+      } else {
+        setEditingAssignment(null);
+      }
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not save changes to that assignment.');
+    } finally {
+      setSavingAssignment(false);
     }
   }
 
@@ -155,6 +226,12 @@ export default function JobList() {
   const isCreating = drawerContent === 'create';
   const editingJob = drawerContent && drawerContent !== 'create' ? drawerContent : null;
   const jobAssignments = editingJob ? assignments.filter((a) => a.job_id === editingJob.id) : [];
+  // One sub per job, total — same rule the Dashboard used to enforce via its
+  // job picker. Cancelled/declined don't count as "occupying" the job, so
+  // the assign form reappears once an assignment there is cancelled.
+  const activeJobAssignments = jobAssignments.filter(
+    (a) => a.status !== 'cancelled' && a.status !== 'declined'
+  );
   // Driven only by job_id and the to-do's own completed flag — never by the
   // job's status, so a to-do on a "Completed" job still shows until it's
   // checked off itself.
@@ -358,28 +435,77 @@ export default function JobList() {
                     <div
                       key={a.id}
                       className="status-card"
-                      style={{
-                        '--status-color': STATUS_HEX[a.status] || '#6B7280',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 12,
-                        flexWrap: 'wrap'
-                      }}
+                      style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280' }}
                     >
-                      <div>
-                        <strong>{a.subcontractor_name}</strong>
-                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                          {formatDateRange(a.start_date, a.end_date)}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <div>
+                          <strong>{a.subcontractor_name}</strong>
+                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
+                            {formatDateRange(a.start_date, a.end_date)}
+                          </div>
                         </div>
+                        <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
+                          Edit dates
+                        </Button>
                       </div>
                       {a.status !== 'pending' && (
-                        <Badge color={ASSIGNMENT_STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                        <Badge color={ASSIGNMENT_STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
+                          {a.status}
+                        </Badge>
                       )}
                     </div>
                   ))}
                   {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}
                 </div>
+
+                {/* One sub per job — this only shows when the job doesn't
+                    already have an active (non-cancelled) assignment. */}
+                {activeJobAssignments.length === 0 && (
+                  <div style={{ marginTop: 16 }}>
+                    <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
+                    {assignConflictWarning && (
+                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+                        <MessageBarBody>{assignConflictWarning}</MessageBarBody>
+                      </MessageBar>
+                    )}
+                    <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
+                      <Field label="Subcontractor" required>
+                        <Dropdown
+                          placeholder="Select a subcontractor"
+                          value={
+                            subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
+                          }
+                          onOptionSelect={(_, data) =>
+                            setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
+                          }
+                        >
+                          {subcontractors.map((s) => (
+                            <Option key={s.id} value={String(s.id)}>
+                              {s.company_name}
+                            </Option>
+                          ))}
+                        </Dropdown>
+                      </Field>
+                      <Field label="Start date" required>
+                        <Input
+                          type="date"
+                          value={assignForm.start_date}
+                          onChange={(e) => setAssignForm({ ...assignForm, start_date: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="End date" required>
+                        <Input
+                          type="date"
+                          value={assignForm.end_date}
+                          onChange={(e) => setAssignForm({ ...assignForm, end_date: e.target.value })}
+                        />
+                      </Field>
+                      <Button appearance="primary" type="submit" disabled={assigning}>
+                        {assigning ? 'Assigning…' : 'Assign'}
+                      </Button>
+                    </form>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -408,6 +534,50 @@ export default function JobList() {
               </div>
             </div>
           )}
+        </DrawerBody>
+      </OverlayDrawer>
+
+      {/* Edit an existing assignment's dates */}
+      <OverlayDrawer
+        open={editingAssignment !== null}
+        onOpenChange={(_, { open }) => !open && setEditingAssignment(null)}
+        position="start"
+        size="small"
+      >
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setEditingAssignment(null)} />
+            }
+          >
+            Edit dates — {editingAssignment?.subcontractor_name}
+          </DrawerHeaderTitle>
+        </DrawerHeader>
+        <DrawerBody>
+          {assignmentEditWarning && (
+            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+              <MessageBarBody>{assignmentEditWarning}</MessageBarBody>
+            </MessageBar>
+          )}
+          <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
+            <Field label="Start date">
+              <Input
+                type="date"
+                value={assignmentEditForm.start_date}
+                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, start_date: e.target.value })}
+              />
+            </Field>
+            <Field label="End date">
+              <Input
+                type="date"
+                value={assignmentEditForm.end_date}
+                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, end_date: e.target.value })}
+              />
+            </Field>
+            <Button appearance="primary" type="submit" disabled={savingAssignment}>
+              {savingAssignment ? 'Saving…' : 'Save changes'}
+            </Button>
+          </form>
         </DrawerBody>
       </OverlayDrawer>
     </div>
