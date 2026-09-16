@@ -30,7 +30,17 @@ import {
 } from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
-const EMPTY_FORM = { address: '', job_type: [] };
+const EMPTY_FORM = {
+  address: '',
+  job_type: [],
+  time: '',
+  yardage: '',
+  materials: [],
+  ordered_materials: [],
+  status: 'active',
+  subcontractor_id: '',
+  date: ''
+};
 const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
@@ -52,6 +62,11 @@ export default function JobList() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Surfaced when creating a job and assigning a sub to it in one step
+  // produces a scheduling conflict. Shown at the page level (not inside the
+  // drawer) since the drawer closes right after — this needs to stay
+  // visible past that close, not disappear along with it.
+  const [createAssignWarning, setCreateAssignWarning] = useState(null);
 
   // 'create' shows the add form (small drawer). A job object shows its
   // full-screen edit view. null closes the drawer entirely.
@@ -113,9 +128,38 @@ export default function JobList() {
   async function handleAdd(e) {
     e.preventDefault();
     setError(null);
+    setCreateAssignWarning(null);
+
+    if (form.subcontractor_id && !form.date) {
+      setError('Pick a date for the assignment, or clear the subcontractor if you don\'t want to assign one yet.');
+      return;
+    }
+    if (!form.subcontractor_id && form.date) {
+      setError('Pick a subcontractor for that date, or clear the date if you don\'t want to assign one yet.');
+      return;
+    }
+
     try {
       const token = await getToken();
-      await api.addJob(token, form);
+      const newJob = await api.addJob(token, form);
+
+      // Optional — only if a subcontractor was actually picked. Same soft
+      // conflict handling as the standalone assign form: saved either way,
+      // just flagged if it overlaps something else that sub is already on.
+      if (form.subcontractor_id) {
+        const { conflicts } = await api.addAssignment(token, {
+          subcontractor_id: form.subcontractor_id,
+          job_id: newJob.id,
+          start_date: form.date,
+          end_date: form.date
+        });
+        if (conflicts.length > 0) {
+          setCreateAssignWarning(
+            `Job created, but heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
+          );
+        }
+      }
+
       setForm(EMPTY_FORM);
       setDrawerContent(null);
       await load();
@@ -301,6 +345,11 @@ export default function JobList() {
           <MessageBarBody>{error}</MessageBarBody>
         </MessageBar>
       )}
+      {createAssignWarning && (
+        <MessageBar intent="warning">
+          <MessageBarBody>{createAssignWarning}</MessageBarBody>
+        </MessageBar>
+      )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <h3 style={{ margin: 0 }}>Jobs</h3>
@@ -437,12 +486,14 @@ export default function JobList() {
         })()}
       </div>
 
-      {/* Small side panel for creating a new job */}
+      {/* Full-screen create view — same field set as editing an existing
+          job, minus the "Assigned subcontractors" and "Open to-dos"
+          sections, since those inherently need a job that already exists. */}
       <OverlayDrawer
         open={isCreating}
         onOpenChange={(_, { open }) => !open && setDrawerContent(null)}
         position="start"
-        size="small"
+        size="full"
       >
         <DrawerHeader>
           <DrawerHeaderTitle
@@ -454,29 +505,123 @@ export default function JobList() {
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
-          <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Address" required>
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </Field>
-            <Field label="Job type" required>
-              <Dropdown
-                placeholder="Select one or more"
-                multiselect
-                value={form.job_type.join(', ')}
-                selectedOptions={form.job_type}
-                onOptionSelect={(_, data) => setForm({ ...form, job_type: data.selectedOptions })}
-              >
-                {JOB_TYPE_OPTIONS.map((t) => (
-                  <Option key={t} value={t}>
-                    {t}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
-            <Button appearance="primary" type="submit">
-              Add job
-            </Button>
-          </form>
+          <div style={{ maxWidth: 700, margin: '0 auto' }}>
+            <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
+              <Field label="Address" required>
+                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </Field>
+              <Field label="Job type" required>
+                <Dropdown
+                  placeholder="Select one or more"
+                  multiselect
+                  value={form.job_type.join(', ')}
+                  selectedOptions={form.job_type}
+                  onOptionSelect={(_, data) => setForm({ ...form, job_type: data.selectedOptions })}
+                >
+                  {JOB_TYPE_OPTIONS.map((t) => (
+                    <Option key={t} value={t}>
+                      {t}
+                    </Option>
+                  ))}
+                </Dropdown>
+              </Field>
+              <Field label="Time">
+                <Input
+                  type="time"
+                  value={form.time}
+                  onChange={(e) => setForm({ ...form, time: e.target.value })}
+                />
+              </Field>
+              <Field label="Yardage">
+                <Input
+                  type="number"
+                  step="0.5"
+                  value={form.yardage}
+                  onChange={(e) => setForm({ ...form, yardage: e.target.value })}
+                />
+              </Field>
+              <Field label="Materials">
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {MATERIAL_OPTIONS.map((m) => (
+                    <Checkbox
+                      key={m}
+                      label={m}
+                      checked={form.materials.includes(m)}
+                      onChange={(_, data) =>
+                        setForm({
+                          ...form,
+                          materials: data.checked
+                            ? [...form.materials, m]
+                            : form.materials.filter((x) => x !== m),
+                          ordered_materials: data.checked
+                            ? form.ordered_materials
+                            : form.ordered_materials.filter((x) => x !== m)
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              </Field>
+              {form.materials.length > 0 && (
+                <Field label="Materials ordered">
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {form.materials.map((m) => (
+                      <Checkbox
+                        key={m}
+                        label={m}
+                        checked={form.ordered_materials.includes(m)}
+                        onChange={(_, data) =>
+                          setForm({
+                            ...form,
+                            ordered_materials: data.checked
+                              ? [...form.ordered_materials, m]
+                              : form.ordered_materials.filter((x) => x !== m)
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                </Field>
+              )}
+              <Field label="Status">
+                <Dropdown
+                  value={STATUS_LABEL[form.status] || form.status}
+                  selectedOptions={[form.status]}
+                  onOptionSelect={(_, data) => setForm({ ...form, status: data.optionValue })}
+                >
+                  <Option value="active">Active</Option>
+                  <Option value="completed">Completed</Option>
+                  <Option value="cancelled">Cancelled</Option>
+                </Dropdown>
+              </Field>
+
+              <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
+              <Field label="Subcontractor">
+                <Dropdown
+                  placeholder="Select a subcontractor"
+                  value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
+                  onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
+                >
+                  {subcontractors.map((s) => (
+                    <Option key={s.id} value={String(s.id)}>
+                      {s.company_name}
+                    </Option>
+                  ))}
+                </Dropdown>
+              </Field>
+              <Field label="Date">
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </Field>
+
+              <Button appearance="primary" type="submit">
+                Add job
+              </Button>
+            </form>
+          </div>
         </DrawerBody>
       </OverlayDrawer>
 
