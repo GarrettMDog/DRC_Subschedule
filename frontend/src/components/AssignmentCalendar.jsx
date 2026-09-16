@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@fluentui/react-components';
-import { materialsOrderedColor } from '../theme';
+import { materialsOrderedColor, isFullyOrdered } from '../theme';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PILLS_PER_DAY = 3;
@@ -138,9 +138,9 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
                     className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
                       isDimmed ? 'is-dimmed' : ''
                     }`}
-                    style={{ background: materialsOrderedColor(a.materials_ordered) }}
+                    style={{ background: materialsOrderedColor(isFullyOrdered(a)) }}
                     title={`${a.subcontractor_name} → ${a.job_address} — materials ${
-                      a.materials_ordered ? 'ordered' : 'not ordered'
+                      isFullyOrdered(a) ? 'ordered' : 'not ordered'
                     }`}
                     onClick={() => togglePillSelection(a)}
                   >

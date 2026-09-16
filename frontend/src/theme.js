@@ -45,13 +45,13 @@ export const JOB_STATUS_HEX = {
 
 /**
  * Red until materials are marked ordered, then green. Used as the primary
- * visual accent for jobs everywhere they appear (Jobs tab, Dashboard list
- * and calendar, a subcontractor's job history) — deliberately takes over
- * from status-based coloring for this accent, since materials-ordered is
- * the thing that needs to catch someone's eye at a glance.
+ * visual accent for jobs everywhere they appear (Jobs tab, Calendar,
+ * a subcontractor's job history). Takes a plain boolean — callers compute
+ * that boolean via isFullyOrdered() below, which is what actually decides
+ * whether a job counts as "ordered" now.
  */
-export function materialsOrderedColor(materialsOrdered) {
-  return materialsOrdered ? '#1E7C4D' : '#B42318';
+export function materialsOrderedColor(isOrdered) {
+  return isOrdered ? '#1E7C4D' : '#B42318';
 }
 
 /**
@@ -92,9 +92,8 @@ export function parseJobTypes(jobType) {
 
 /**
  * A job can need more than one material (e.g. both Concrete and Pump).
- * Same storage pattern as job_type — comma-separated string in the
- * `materials` column. Distinct from `materials_ordered`, which tracks
- * whether ordering has happened, not which materials are needed.
+ * Stored as a comma-separated string in the `materials` column — which
+ * materials this job needs, not whether they've been ordered.
  */
 export function formatMaterials(materials) {
   return formatMultiValue(materials);
@@ -102,4 +101,20 @@ export function formatMaterials(materials) {
 
 export function parseMaterials(materials) {
   return parseMultiValue(materials);
+}
+
+/**
+ * Replaces the old single "materials ordered" boolean. Each needed material
+ * now has its own ordered/not-ordered status, tracked as a second
+ * comma-separated list (`ordered_materials`) of which needed materials have
+ * been marked ordered so far. A job counts as fully ordered only once every
+ * material it needs also appears in that ordered list — red otherwise.
+ * A job with no materials specified at all is treated as not ordered
+ * (there's nothing to vacuously satisfy; it just hasn't been set up yet).
+ */
+export function isFullyOrdered(job) {
+  const needed = parseMaterials(job.materials);
+  if (needed.length === 0) return false;
+  const ordered = parseMaterials(job.ordered_materials);
+  return needed.every((m) => ordered.includes(m));
 }

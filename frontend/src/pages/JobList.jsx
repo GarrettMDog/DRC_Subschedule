@@ -19,7 +19,15 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
-import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes, formatMaterials, parseMaterials } from '../theme';
+import {
+  STATUS_HEX,
+  materialsOrderedColor,
+  formatJobType,
+  parseJobTypes,
+  formatMaterials,
+  parseMaterials,
+  isFullyOrdered
+} from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
 const EMPTY_FORM = { address: '', job_type: [] };
@@ -124,8 +132,8 @@ export default function JobList() {
       job_type: parseJobTypes(job.job_type),
       yardage: job.yardage || '',
       materials: parseMaterials(job.materials),
-      status: job.status || 'active',
-      materials_ordered: !!job.materials_ordered
+      ordered_materials: parseMaterials(job.ordered_materials),
+      status: job.status || 'active'
     });
     setAssignForm(EMPTY_ASSIGN_FORM);
     setAssignConflictWarning(null);
@@ -262,7 +270,7 @@ export default function JobList() {
       <div
         key={j.id}
         className="list-row"
-        style={{ '--status-color': materialsOrderedColor(j.materials_ordered) }}
+        style={{ '--status-color': materialsOrderedColor(isFullyOrdered(j)) }}
         onClick={() => openJobDetail(j)}
       >
         <div>
@@ -275,7 +283,7 @@ export default function JobList() {
             {[
               j.time ? formatTime(j.time) : null,
               STATUS_LABEL[j.status] || j.status,
-              j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'
+              j.materials ? (isFullyOrdered(j) ? 'Materials ordered' : 'Materials pending') : null
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -540,13 +548,40 @@ export default function JobList() {
                             ...editForm,
                             materials: data.checked
                               ? [...editForm.materials, m]
-                              : editForm.materials.filter((x) => x !== m)
+                              : editForm.materials.filter((x) => x !== m),
+                            // Unchecking a material also clears its ordered
+                            // status — no point keeping a stale "ordered"
+                            // flag for something the job no longer needs.
+                            ordered_materials: data.checked
+                              ? editForm.ordered_materials
+                              : editForm.ordered_materials.filter((x) => x !== m)
                           })
                         }
                       />
                     ))}
                   </div>
                 </Field>
+                {editForm.materials.length > 0 && (
+                  <Field label="Materials ordered">
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      {editForm.materials.map((m) => (
+                        <Checkbox
+                          key={m}
+                          label={m}
+                          checked={editForm.ordered_materials.includes(m)}
+                          onChange={(_, data) =>
+                            setEditForm({
+                              ...editForm,
+                              ordered_materials: data.checked
+                                ? [...editForm.ordered_materials, m]
+                                : editForm.ordered_materials.filter((x) => x !== m)
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </Field>
+                )}
                 <Field label="Status">
                   <Dropdown
                     value={STATUS_LABEL[editForm.status] || editForm.status}
@@ -558,11 +593,6 @@ export default function JobList() {
                     <Option value="cancelled">Cancelled</Option>
                   </Dropdown>
                 </Field>
-                <Checkbox
-                  label="Materials ordered"
-                  checked={editForm.materials_ordered}
-                  onChange={(_, data) => setEditForm({ ...editForm, materials_ordered: data.checked })}
-                />
                 <Button appearance="primary" type="submit" disabled={saving}>
                   {saving ? 'Saving…' : 'Save changes'}
                 </Button>

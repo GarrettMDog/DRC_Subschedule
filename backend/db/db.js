@@ -34,6 +34,7 @@ db.exec(`
     job_type TEXT,
     yardage TEXT,
     materials TEXT,
+    ordered_materials TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
@@ -117,6 +118,22 @@ if (!hasYardage) {
 const hasMaterials = jobColumns.some((col) => col.name === 'materials');
 if (!hasMaterials) {
   db.exec('ALTER TABLE jobs ADD COLUMN materials TEXT');
+}
+
+const hasOrderedMaterials = jobColumns.some((col) => col.name === 'ordered_materials');
+if (!hasOrderedMaterials) {
+  db.exec('ALTER TABLE jobs ADD COLUMN ordered_materials TEXT');
+  // One-time conversion: the old single "materials ordered" boolean is
+  // replaced by per-material tracking. A job previously marked ordered
+  // (materials_ordered = 1) is treated as having ALL of its needed
+  // materials ordered under the new system — the closest equivalent to
+  // what that checkbox used to mean. Jobs not yet marked ordered, or with
+  // no materials specified at all, start with nothing ordered.
+  db.exec(`
+    UPDATE jobs
+    SET ordered_materials = materials
+    WHERE materials_ordered = 1 AND materials IS NOT NULL
+  `);
 }
 
 module.exports = db;
