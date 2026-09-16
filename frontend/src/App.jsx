@@ -35,9 +35,9 @@ export default function App() {
             <AuthenticatedTemplate>
               <OfficeLayout>
                 <Routes>
-                  <Route path="/" element={<OfficeDashboard />} />
+                  <Route path="/" element={<JobList />} />
+                  <Route path="/calendar" element={<OfficeDashboard />} />
                   <Route path="/subcontractors" element={<SubcontractorDirectory />} />
-                  <Route path="/jobs" element={<JobList />} />
                   <Route path="/services" element={<Services />} />
                 </Routes>
               </OfficeLayout>

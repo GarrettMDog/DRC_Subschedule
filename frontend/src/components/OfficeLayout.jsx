@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 
 const NAV_ITEMS = [
-  { value: '/jobs', label: 'Jobs' },
-  { value: '/', label: 'Calendar' },
+  { value: '/', label: 'Jobs' },
+  { value: '/calendar', label: 'Calendar' },
   { value: '/subcontractors', label: 'Subcontractors' },
   { value: '/services', label: 'Services' }
 ];
