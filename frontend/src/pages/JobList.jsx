@@ -20,8 +20,9 @@ import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange, formatDate, formatTime } from '../dateUtils';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
 
-const EMPTY_FORM = { name: '', address: '' };
+const EMPTY_FORM = { name: '', address: '', job_type: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
+const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 
 const ASSIGNMENT_STATUS_COLOR = {
   pending: 'warning',
@@ -94,6 +95,7 @@ export default function JobList() {
       name: job.name,
       address: job.address || '',
       time: job.time || '',
+      job_type: job.job_type || '',
       status: job.status || 'active',
       materials_ordered: !!job.materials_ordered
     });
@@ -216,7 +218,10 @@ export default function JobList() {
             onClick={() => openJobDetail(j)}
           >
             <div>
-              <strong>{j.name}</strong>
+              <strong>
+                {j.job_type ? `${j.job_type} — ` : ''}
+                {j.name}
+              </strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                 {[
                   j.address,
@@ -258,6 +263,20 @@ export default function JobList() {
             <Field label="Job name" required>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </Field>
+            <Field label="Job type" required>
+              <Dropdown
+                placeholder="Select a type"
+                value={form.job_type}
+                selectedOptions={form.job_type ? [form.job_type] : []}
+                onOptionSelect={(_, data) => setForm({ ...form, job_type: data.optionValue })}
+              >
+                {JOB_TYPE_OPTIONS.map((t) => (
+                  <Option key={t} value={t}>
+                    {t}
+                  </Option>
+                ))}
+              </Dropdown>
+            </Field>
             <Field label="Address">
               <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
@@ -281,7 +300,7 @@ export default function JobList() {
               <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setDrawerContent(null)} />
             }
           >
-            {editingJob?.name}
+            {editingJob && (editingJob.job_type ? `${editingJob.job_type} — ` : '') + (editingJob?.name || '')}
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
@@ -299,6 +318,20 @@ export default function JobList() {
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
                   />
+                </Field>
+                <Field label="Job type" required>
+                  <Dropdown
+                    placeholder="Select a type"
+                    value={editForm.job_type}
+                    selectedOptions={editForm.job_type ? [editForm.job_type] : []}
+                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.optionValue })}
+                  >
+                    {JOB_TYPE_OPTIONS.map((t) => (
+                      <Option key={t} value={t}>
+                        {t}
+                      </Option>
+                    ))}
+                  </Dropdown>
                 </Field>
                 <Field label="Time">
                   <Input

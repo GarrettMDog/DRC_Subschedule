@@ -88,7 +88,10 @@ export default function SubSchedule() {
                     <div key={a.id} className="status-card" style={{ '--status-color': display.hex, padding: 14 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <strong>{a.job_name}</strong>
+                          <strong>
+                            {a.job_type ? `${a.job_type} — ` : ''}
+                            {a.job_name}
+                          </strong>
                           <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
                             {a.job_address}
                           </div>

@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { name, address, start_date, end_date } = req.body;
+  const { name, address, start_date, end_date, job_type } = req.body;
 
   if (!name) {
     return res.status(400).json({ error: 'name is required' });
@@ -23,10 +23,10 @@ router.post('/', (req, res) => {
 
   const result = db
     .prepare(
-      `INSERT INTO jobs (name, address, start_date, end_date, created_by)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO jobs (name, address, start_date, end_date, job_type, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(name, address || null, start_date || null, end_date || null, createdBy);
+    .run(name, address || null, start_date || null, end_date || null, job_type || null, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -43,13 +43,14 @@ router.put('/:id', (req, res) => {
     start_date = existing.start_date,
     end_date = existing.end_date,
     time = existing.time,
+    job_type = existing.job_type,
     status = existing.status,
     materials_ordered = existing.materials_ordered
   } = req.body;
 
   db.prepare(
-    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, status = ?, materials_ordered = ? WHERE id = ?`
-  ).run(name, address, start_date, end_date, time, status, materials_ordered ? 1 : 0, id);
+    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, status = ?, materials_ordered = ? WHERE id = ?`
+  ).run(name, address, start_date, end_date, time, job_type, status, materials_ordered ? 1 : 0, id);
 
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });

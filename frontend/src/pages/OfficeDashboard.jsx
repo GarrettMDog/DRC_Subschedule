@@ -247,7 +247,10 @@ export default function OfficeDashboard() {
                       gap: 8
                     }}
                   >
-                    <h4 style={{ margin: 0 }}>{selectedJobDetails.name}</h4>
+                    <h4 style={{ margin: 0 }}>
+                      {selectedJobDetails.job_type ? `${selectedJobDetails.job_type} — ` : ''}
+                      {selectedJobDetails.name}
+                    </h4>
                     <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
                       Clear
                     </Button>
@@ -490,7 +493,10 @@ export default function OfficeDashboard() {
                                   onClick={() => setSelectedJobId(isSelected ? null : a.job_id)}
                                 >
                                   <div>
-                                    <strong>{a.job_name}</strong>
+                                    <strong>
+                                      {a.job_type ? `${a.job_type} — ` : ''}
+                                      {a.job_name}
+                                    </strong>
                                     <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                                       {formatDateRange(a.start_date, a.end_date)}
                                       {a.job_time && ` · ${formatTime(a.job_time)}`}

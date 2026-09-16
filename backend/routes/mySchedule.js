@@ -19,7 +19,7 @@ router.get('/', (req, res) => {
 
   const rows = db
     .prepare(
-      `SELECT a.*, j.name AS job_name, j.address AS job_address, j.time AS job_time
+      `SELECT a.*, j.name AS job_name, j.address AS job_address, j.time AS job_time, j.job_type AS job_type
        FROM assignments a
        JOIN jobs j ON j.id = a.job_id
        WHERE a.subcontractor_id = ?

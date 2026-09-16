@@ -31,6 +31,7 @@ db.exec(`
     start_date TEXT,
     end_date TEXT,
     time TEXT,
+    job_type TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
@@ -99,6 +100,11 @@ if (!hasLastViewedAt) {
 const hasJobTime = jobColumns.some((col) => col.name === 'time');
 if (!hasJobTime) {
   db.exec('ALTER TABLE jobs ADD COLUMN time TEXT');
+}
+
+const hasJobType = jobColumns.some((col) => col.name === 'job_type');
+if (!hasJobType) {
+  db.exec('ALTER TABLE jobs ADD COLUMN job_type TEXT');
 }
 
 module.exports = db;
