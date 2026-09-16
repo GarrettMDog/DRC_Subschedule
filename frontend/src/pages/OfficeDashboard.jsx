@@ -4,6 +4,7 @@ import {
   Field,
   Dropdown,
   Option,
+  Combobox,
   Input,
   Badge,
   Checkbox,
@@ -41,6 +42,8 @@ export default function OfficeDashboard() {
   const [view, setView] = useState('calendar'); // 'list' | 'calendar'
   const [labelMode, setLabelMode] = useState('subcontractor'); // 'subcontractor' | 'job'
   const [selectedJobId, setSelectedJobId] = useState(null);
+  const [subFilterId, setSubFilterId] = useState(null); // null = show everyone
+  const [subFilterText, setSubFilterText] = useState('');
 
   // Editing an existing assignment's dates — there was never any UI for this
   // before, only creating new assignments. Backend already supported it.
@@ -382,6 +385,29 @@ export default function OfficeDashboard() {
             </div>
           </div>
 
+          {view === 'list' && (
+            <div style={{ marginBottom: 12, maxWidth: 260 }}>
+              <Combobox
+                placeholder="Filter by subcontractor…"
+                value={subFilterText}
+                onInput={(e) => setSubFilterText(e.target.value)}
+                onOptionSelect={(_, data) => {
+                  setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
+                  setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
+                }}
+              >
+                <Option value="all">All subcontractors</Option>
+                {subcontractors
+                  .filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()))
+                  .map((s) => (
+                    <Option key={s.id} value={String(s.id)} text={s.company_name}>
+                      {s.company_name}
+                    </Option>
+                  ))}
+              </Combobox>
+            </div>
+          )}
+
           {view === 'calendar' ? (
             <AssignmentCalendar
               assignments={assignments}
@@ -397,8 +423,13 @@ export default function OfficeDashboard() {
                 // backend, and plain JS objects preserve insertion order for
                 // string keys, so building groups this way naturally keeps
                 // that same chronological order — no re-sorting needed.
+                const visibleAssignments =
+                  subFilterId === null
+                    ? assignments
+                    : assignments.filter((a) => a.subcontractor_id === subFilterId);
+
                 const dateGroups = {};
-                for (const a of assignments) {
+                for (const a of visibleAssignments) {
                   if (!dateGroups[a.start_date]) dateGroups[a.start_date] = {};
                   if (!dateGroups[a.start_date][a.subcontractor_name]) {
                     dateGroups[a.start_date][a.subcontractor_name] = [];
@@ -407,7 +438,9 @@ export default function OfficeDashboard() {
                 }
                 const dateKeys = Object.keys(dateGroups);
 
-                if (dateKeys.length === 0) return <p>No assignments yet.</p>;
+                if (dateKeys.length === 0) {
+                  return <p>{subFilterId === null ? 'No assignments yet.' : 'No assignments match this filter.'}</p>;
+                }
 
                 return dateKeys.map((dateKey) => (
                   <div key={dateKey}>
