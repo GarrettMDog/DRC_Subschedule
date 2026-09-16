@@ -249,7 +249,7 @@ export default function Services() {
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
                   {t.assignee_name || 'Unassigned'}
-                  {t.job_name && ` · ${t.job_name}`}
+                  {t.job_address && ` · ${t.job_address}`}
                   {t.due_date && ` · Due ${formatDate(t.due_date)}`}
                 </div>
               </div>
@@ -316,14 +316,14 @@ export default function Services() {
             <Field label="Job (optional)">
               <Dropdown
                 placeholder="No job"
-                value={jobs.find((j) => String(j.id) === todoForm.job_id)?.name || 'No job'}
+                value={jobs.find((j) => String(j.id) === todoForm.job_id)?.address || 'No job'}
                 selectedOptions={[todoForm.job_id]}
                 onOptionSelect={(_, data) => setTodoForm({ ...todoForm, job_id: data.optionValue })}
               >
                 <Option value="">No job</Option>
                 {jobs.map((j) => (
                   <Option key={j.id} value={String(j.id)}>
-                    {j.name}
+                    {j.address}
                   </Option>
                 ))}
               </Dropdown>

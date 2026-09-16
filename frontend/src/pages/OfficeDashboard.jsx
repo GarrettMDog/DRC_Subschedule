@@ -196,12 +196,12 @@ export default function OfficeDashboard() {
             <Field label="Job">
               <Dropdown
                 placeholder={availableJobs.length === 0 ? 'No unassigned jobs' : 'Select a job'}
-                value={availableJobs.find((j) => j.id === form.job_id)?.name || ''}
+                value={availableJobs.find((j) => j.id === form.job_id)?.address || ''}
                 onOptionSelect={(_, data) => setForm({ ...form, job_id: Number(data.optionValue) })}
               >
                 {availableJobs.map((j) => (
                   <Option key={j.id} value={String(j.id)}>
-                    {j.name}
+                    {j.address}
                   </Option>
                 ))}
               </Dropdown>
@@ -249,14 +249,13 @@ export default function OfficeDashboard() {
                   >
                     <h4 style={{ margin: 0 }}>
                       {selectedJobDetails.job_type ? `${selectedJobDetails.job_type} — ` : ''}
-                      {selectedJobDetails.name}
+                      {selectedJobDetails.address}
                     </h4>
                     <Button size="small" appearance="subtle" onClick={() => setSelectedJobId(null)}>
                       Clear
                     </Button>
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)', marginTop: 4, marginBottom: 12 }}>
-                    {selectedJobDetails.address && <>{selectedJobDetails.address}<br /></>}
                     {selectedJobDetails.status}
                     {selectedJobDetails.time && ` · ${formatTime(selectedJobDetails.time)}`}
                   </div>
@@ -495,12 +494,11 @@ export default function OfficeDashboard() {
                                   <div>
                                     <strong>
                                       {a.job_type ? `${a.job_type} — ` : ''}
-                                      {a.job_name}
+                                      {a.job_address}
                                     </strong>
                                     <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                                       {formatDateRange(a.start_date, a.end_date)}
                                       {a.job_time && ` · ${formatTime(a.job_time)}`}
-                                      {a.job_address && ` · ${a.job_address}`}
                                     </div>
                                   </div>
                                   {a.status !== 'pending' && (

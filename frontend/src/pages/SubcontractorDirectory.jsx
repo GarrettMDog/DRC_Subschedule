@@ -259,9 +259,12 @@ export default function SubcontractorDirectory() {
                       }}
                     >
                       <div>
-                        <strong>{a.job_name}</strong>
+                        <strong>
+                          {a.job_type ? `${a.job_type} — ` : ''}
+                          {a.job_address}
+                        </strong>
                         <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                          {formatDateRange(a.start_date, a.end_date)} · {a.job_address}
+                          {formatDateRange(a.start_date, a.end_date)}
                         </div>
                       </div>
                       {a.status !== 'pending' && (

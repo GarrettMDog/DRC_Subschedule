@@ -5,20 +5,23 @@ const router = express.Router();
 
 // GET /api/jobs
 router.get('/', (req, res) => {
-  // Ordering by start_date stopped making sense once job-level dates were
-  // removed from the UI (the column's always null now) — order by name instead.
-  const rows = db.prepare('SELECT * FROM jobs ORDER BY name COLLATE NOCASE').all();
+  const rows = db.prepare('SELECT * FROM jobs ORDER BY address COLLATE NOCASE').all();
   res.json(rows);
 });
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { name, address, start_date, end_date, job_type } = req.body;
+  const { address, start_date, end_date, job_type } = req.body;
 
-  if (!name) {
-    return res.status(400).json({ error: 'name is required' });
+  if (!address) {
+    return res.status(400).json({ error: 'address is required' });
   }
 
+  // The `name` column still exists (NOT NULL) and stays internally in sync
+  // with address — avoids a risky ALTER on an existing NOT NULL constraint
+  // for what's really just a UI simplification. Nothing reads name as a
+  // distinct concept from address anywhere in the app anymore.
+  const name = address;
   const createdBy = req.user?.email || null;
 
   const result = db
@@ -26,7 +29,7 @@ router.post('/', (req, res) => {
       `INSERT INTO jobs (name, address, start_date, end_date, job_type, created_by)
        VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(name, address || null, start_date || null, end_date || null, job_type || null, createdBy);
+    .run(name, address, start_date || null, end_date || null, job_type || null, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -38,7 +41,6 @@ router.put('/:id', (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Job not found' });
 
   const {
-    name = existing.name,
     address = existing.address,
     start_date = existing.start_date,
     end_date = existing.end_date,
@@ -47,6 +49,9 @@ router.put('/:id', (req, res) => {
     status = existing.status,
     materials_ordered = existing.materials_ordered
   } = req.body;
+
+  // name always mirrors address now, not a separately-edited value.
+  const name = address;
 
   db.prepare(
     `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, status = ?, materials_ordered = ? WHERE id = ?`

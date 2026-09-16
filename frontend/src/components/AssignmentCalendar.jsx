@@ -97,7 +97,7 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
       {selectedJob && (
         <div className="calendar-job-banner">
           <span>
-            Highlighting <strong>{selectedJob.job_name}</strong>
+            Highlighting <strong>{selectedJob.job_address}</strong>
           </span>
           <Button size="small" appearance="subtle" onClick={() => onSelectJob(null)}>
             Clear
@@ -139,12 +139,12 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
                       isDimmed ? 'is-dimmed' : ''
                     }`}
                     style={{ background: materialsOrderedColor(a.materials_ordered) }}
-                    title={`${a.subcontractor_name} → ${a.job_name} — materials ${
+                    title={`${a.subcontractor_name} → ${a.job_address} — materials ${
                       a.materials_ordered ? 'ordered' : 'not ordered'
                     }`}
                     onClick={() => togglePillSelection(a)}
                   >
-                    {labelMode === 'job' ? a.job_name : a.subcontractor_name}
+                    {labelMode === 'job' ? a.job_address : a.subcontractor_name}
                   </button>
                 );
               })}

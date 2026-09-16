@@ -20,7 +20,8 @@ import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange, formatDate, formatTime } from '../dateUtils';
 import { STATUS_HEX, materialsOrderedColor } from '../theme';
 
-const EMPTY_FORM = { name: '', address: '', job_type: '' };
+// No more separate "Job name" concept — address is the sole identifier now.
+const EMPTY_FORM = { address: '', job_type: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 
@@ -49,7 +50,7 @@ export default function JobList() {
   // Search / filter / sort — matters more as the job list grows.
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('address');
 
   async function load() {
     try {
@@ -92,7 +93,6 @@ export default function JobList() {
   function openJobDetail(job) {
     setDrawerContent(job);
     setEditForm({
-      name: job.name,
       address: job.address || '',
       time: job.time || '',
       job_type: job.job_type || '',
@@ -139,14 +139,12 @@ export default function JobList() {
 
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
-      result = result.filter(
-        (j) => j.name.toLowerCase().includes(q) || (j.address || '').toLowerCase().includes(q)
-      );
+      result = result.filter((j) => (j.address || '').toLowerCase().includes(q));
     }
 
     const sorted = [...result].sort((a, b) => {
       if (sortBy === 'status') return (a.status || '').localeCompare(b.status || '');
-      return a.name.localeCompare(b.name);
+      return (a.address || '').localeCompare(b.address || '');
     });
 
     return sorted;
@@ -180,7 +178,7 @@ export default function JobList() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
         <Field label="Search" style={{ minWidth: 200, flex: 1 }}>
           <Input
-            placeholder="Job name or address…"
+            placeholder="Job address…"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
@@ -199,11 +197,11 @@ export default function JobList() {
         </Field>
         <Field label="Sort by">
           <Dropdown
-            value={sortBy === 'status' ? 'Status' : 'Name (A–Z)'}
+            value={sortBy === 'status' ? 'Status' : 'Address (A–Z)'}
             selectedOptions={[sortBy]}
             onOptionSelect={(_, data) => setSortBy(data.optionValue)}
           >
-            <Option value="name">Name (A–Z)</Option>
+            <Option value="address">Address (A–Z)</Option>
             <Option value="status">Status</Option>
           </Dropdown>
         </Field>
@@ -220,11 +218,10 @@ export default function JobList() {
             <div>
               <strong>
                 {j.job_type ? `${j.job_type} — ` : ''}
-                {j.name}
+                {j.address}
               </strong>
               <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
                 {[
-                  j.address,
                   j.time ? formatTime(j.time) : null,
                   STATUS_LABEL[j.status] || j.status,
                   j.materials_ordered ? 'Materials ordered' : 'Materials not ordered'
@@ -260,8 +257,8 @@ export default function JobList() {
         </DrawerHeader>
         <DrawerBody>
           <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Job name" required>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <Field label="Address" required>
+              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
             <Field label="Job type" required>
               <Dropdown
@@ -276,9 +273,6 @@ export default function JobList() {
                   </Option>
                 ))}
               </Dropdown>
-            </Field>
-            <Field label="Address">
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
             <Button appearance="primary" type="submit">
               Add job
@@ -300,20 +294,14 @@ export default function JobList() {
               <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setDrawerContent(null)} />
             }
           >
-            {editingJob && (editingJob.job_type ? `${editingJob.job_type} — ` : '') + (editingJob?.name || '')}
+            {editingJob && (editingJob.job_type ? `${editingJob.job_type} — ` : '') + (editingJob?.address || '')}
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
           {editingJob && editForm && (
             <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
               <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
-                <Field label="Job name" required>
-                  <Input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  />
-                </Field>
-                <Field label="Address">
+                <Field label="Address" required>
                   <Input
                     value={editForm.address}
                     onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}

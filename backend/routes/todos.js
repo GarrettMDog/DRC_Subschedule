@@ -9,7 +9,7 @@ const router = express.Router();
 router.get('/', (req, res) => {
   const rows = db
     .prepare(
-      `SELECT t.*, sa.name AS assignee_name, j.name AS job_name
+      `SELECT t.*, sa.name AS assignee_name, j.address AS job_address
        FROM todos t
        LEFT JOIN service_assignees sa ON sa.id = t.assignee_id
        LEFT JOIN jobs j ON j.id = t.job_id

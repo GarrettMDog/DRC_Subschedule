@@ -90,11 +90,8 @@ export default function SubSchedule() {
                         <div>
                           <strong>
                             {a.job_type ? `${a.job_type} — ` : ''}
-                            {a.job_name}
-                          </strong>
-                          <div style={{ fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
                             {a.job_address}
-                          </div>
+                          </strong>
                           <div style={{ fontSize: 13, marginTop: 4 }}>
                             {formatDateRange(a.start_date, a.end_date)}
                             {a.job_time && ` · ${formatTime(a.job_time)}`}
