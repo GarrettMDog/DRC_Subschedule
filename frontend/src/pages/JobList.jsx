@@ -22,7 +22,7 @@ import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes } from 
 
 // No more separate "Job name" concept — address is the sole identifier now.
 const EMPTY_FORM = { address: '', job_type: [] };
-const EMPTY_ASSIGN_FORM = { subcontractor_id: '', start_date: '', end_date: '' };
+const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 
@@ -59,7 +59,7 @@ export default function JobList() {
   // the Dashboard's detail panel was removed. Brought back here since
   // assignment management now lives entirely on the job itself.
   const [editingAssignment, setEditingAssignment] = useState(null);
-  const [assignmentEditForm, setAssignmentEditForm] = useState({ start_date: '', end_date: '' });
+  const [assignmentEditForm, setAssignmentEditForm] = useState({ date: '' });
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
@@ -144,7 +144,12 @@ export default function JobList() {
     setAssigning(true);
     try {
       const token = await getToken();
-      const { conflicts } = await api.addAssignment(token, { ...assignForm, job_id: drawerContent.id });
+      const { conflicts } = await api.addAssignment(token, {
+        subcontractor_id: assignForm.subcontractor_id,
+        job_id: drawerContent.id,
+        start_date: assignForm.date,
+        end_date: assignForm.date
+      });
       if (conflicts.length > 0) {
         setAssignConflictWarning(
           `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway — review below.`
@@ -161,7 +166,7 @@ export default function JobList() {
 
   function openEditAssignment(assignment) {
     setAssignmentEditWarning(null);
-    setAssignmentEditForm({ start_date: assignment.start_date, end_date: assignment.end_date });
+    setAssignmentEditForm({ date: assignment.start_date });
     setEditingAssignment(assignment);
   }
 
@@ -172,7 +177,10 @@ export default function JobList() {
     setSavingAssignment(true);
     try {
       const token = await getToken();
-      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, assignmentEditForm);
+      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, {
+        start_date: assignmentEditForm.date,
+        end_date: assignmentEditForm.date
+      });
       if (conflicts.length > 0) {
         setAssignmentEditWarning(
           `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
@@ -445,7 +453,7 @@ export default function JobList() {
                           </div>
                         </div>
                         <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
-                          Edit dates
+                          Edit date
                         </Button>
                       </div>
                       {a.status !== 'pending' && (
@@ -486,18 +494,11 @@ export default function JobList() {
                           ))}
                         </Dropdown>
                       </Field>
-                      <Field label="Start date" required>
+                      <Field label="Date" required>
                         <Input
                           type="date"
-                          value={assignForm.start_date}
-                          onChange={(e) => setAssignForm({ ...assignForm, start_date: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="End date" required>
-                        <Input
-                          type="date"
-                          value={assignForm.end_date}
-                          onChange={(e) => setAssignForm({ ...assignForm, end_date: e.target.value })}
+                          value={assignForm.date}
+                          onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
                         />
                       </Field>
                       <Button appearance="primary" type="submit" disabled={assigning}>
@@ -550,7 +551,7 @@ export default function JobList() {
               <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setEditingAssignment(null)} />
             }
           >
-            Edit dates — {editingAssignment?.subcontractor_name}
+            Edit date — {editingAssignment?.subcontractor_name}
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
@@ -560,18 +561,11 @@ export default function JobList() {
             </MessageBar>
           )}
           <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Start date">
+            <Field label="Date">
               <Input
                 type="date"
-                value={assignmentEditForm.start_date}
-                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, start_date: e.target.value })}
-              />
-            </Field>
-            <Field label="End date">
-              <Input
-                type="date"
-                value={assignmentEditForm.end_date}
-                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, end_date: e.target.value })}
+                value={assignmentEditForm.date}
+                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, date: e.target.value })}
               />
             </Field>
             <Button appearance="primary" type="submit" disabled={savingAssignment}>
