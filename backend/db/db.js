@@ -32,6 +32,8 @@ db.exec(`
     end_date TEXT,
     time TEXT,
     job_type TEXT,
+    yardage TEXT,
+    materials TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
@@ -105,6 +107,16 @@ if (!hasJobTime) {
 const hasJobType = jobColumns.some((col) => col.name === 'job_type');
 if (!hasJobType) {
   db.exec('ALTER TABLE jobs ADD COLUMN job_type TEXT');
+}
+
+const hasYardage = jobColumns.some((col) => col.name === 'yardage');
+if (!hasYardage) {
+  db.exec('ALTER TABLE jobs ADD COLUMN yardage TEXT');
+}
+
+const hasMaterials = jobColumns.some((col) => col.name === 'materials');
+if (!hasMaterials) {
+  db.exec('ALTER TABLE jobs ADD COLUMN materials TEXT');
 }
 
 module.exports = db;

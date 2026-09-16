@@ -55,26 +55,51 @@ export function materialsOrderedColor(materialsOrdered) {
 }
 
 /**
- * A job can now have more than one type (e.g. both Prep and Pour). Stored as
- * a plain comma-separated string in the same `job_type` column — no schema
- * change needed for what's a fixed, tiny set of values (Box/Prep/Pour).
- * Formats for display: "Prep,Pour" -> "Prep + Pour".
+ * Generic helpers for a comma-separated multi-value column (a fixed, tiny
+ * set of options where more than one can apply — job type, materials).
+ * Formats "Prep,Pour" -> "Prep + Pour"; parses it back into an array for
+ * populating a multiselect/checkbox control.
  */
-export function formatJobType(jobType) {
-  if (!jobType) return '';
-  return jobType
+function formatMultiValue(value) {
+  if (!value) return '';
+  return value
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean)
     .join(' + ');
 }
 
-/** Inverse of the above — splits the stored string back into an array of
- * individual type values, for populating a multiselect control. */
-export function parseJobTypes(jobType) {
-  if (!jobType) return [];
-  return jobType
+function parseMultiValue(value) {
+  if (!value) return [];
+  return value
     .split(',')
     .map((t) => t.trim())
     .filter(Boolean);
+}
+
+/**
+ * A job can have more than one type (e.g. both Prep and Pour). Stored as a
+ * plain comma-separated string in the `job_type` column — no schema change
+ * needed for what's a fixed, tiny set of values (Box/Prep/Pour).
+ */
+export function formatJobType(jobType) {
+  return formatMultiValue(jobType);
+}
+
+export function parseJobTypes(jobType) {
+  return parseMultiValue(jobType);
+}
+
+/**
+ * A job can need more than one material (e.g. both Concrete and Pump).
+ * Same storage pattern as job_type — comma-separated string in the
+ * `materials` column. Distinct from `materials_ordered`, which tracks
+ * whether ordering has happened, not which materials are needed.
+ */
+export function formatMaterials(materials) {
+  return formatMultiValue(materials);
+}
+
+export function parseMaterials(materials) {
+  return parseMultiValue(materials);
 }

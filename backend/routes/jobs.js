@@ -3,11 +3,12 @@ const db = require('../db/db');
 
 const router = express.Router();
 
-// job_type now supports multiple values (e.g. a job that's both Prep and
-// Pour). Frontend sends an array from the multiselect control; stored as a
-// plain comma-separated string in the same column — no schema change
-// needed for a fixed set of 3 possible values.
-function normalizeJobType(value) {
+// Multi-value fields (job_type, materials) support more than one value —
+// e.g. a job that's both Prep and Pour, or needs both Concrete and Pump.
+// Frontend sends an array from the multiselect/checkboxes; stored as a
+// plain comma-separated string in the column — no schema change needed
+// for these small, fixed sets of options.
+function normalizeMultiValue(value) {
   if (Array.isArray(value)) {
     const joined = value.filter(Boolean).join(',');
     return joined || null;
@@ -23,7 +24,7 @@ router.get('/', (req, res) => {
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { address, start_date, end_date, job_type } = req.body;
+  const { address, start_date, end_date, job_type, yardage, materials } = req.body;
 
   if (!address) {
     return res.status(400).json({ error: 'address is required' });
@@ -38,10 +39,19 @@ router.post('/', (req, res) => {
 
   const result = db
     .prepare(
-      `INSERT INTO jobs (name, address, start_date, end_date, job_type, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO jobs (name, address, start_date, end_date, job_type, yardage, materials, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(name, address, start_date || null, end_date || null, normalizeJobType(job_type), createdBy);
+    .run(
+      name,
+      address,
+      start_date || null,
+      end_date || null,
+      normalizeMultiValue(job_type),
+      yardage || null,
+      normalizeMultiValue(materials),
+      createdBy
+    );
 
   res.status(201).json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -58,6 +68,8 @@ router.put('/:id', (req, res) => {
     end_date = existing.end_date,
     time = existing.time,
     job_type = existing.job_type,
+    yardage = existing.yardage,
+    materials = existing.materials,
     status = existing.status,
     materials_ordered = existing.materials_ordered
   } = req.body;
@@ -66,8 +78,20 @@ router.put('/:id', (req, res) => {
   const name = address;
 
   db.prepare(
-    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, status = ?, materials_ordered = ? WHERE id = ?`
-  ).run(name, address, start_date, end_date, time, normalizeJobType(job_type), status, materials_ordered ? 1 : 0, id);
+    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, yardage = ?, materials = ?, status = ?, materials_ordered = ? WHERE id = ?`
+  ).run(
+    name,
+    address,
+    start_date,
+    end_date,
+    time,
+    normalizeMultiValue(job_type),
+    yardage,
+    normalizeMultiValue(materials),
+    status,
+    materials_ordered ? 1 : 0,
+    id
+  );
 
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });

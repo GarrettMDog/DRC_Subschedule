@@ -19,13 +19,14 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
-import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes } from '../theme';
+import { STATUS_HEX, materialsOrderedColor, formatJobType, parseJobTypes, formatMaterials, parseMaterials } from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
 const EMPTY_FORM = { address: '', job_type: [] };
 const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
 const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
+const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Gravel', 'Dumptruck'];
 
 const ASSIGNMENT_STATUS_COLOR = {
   pending: 'warning',
@@ -121,6 +122,8 @@ export default function JobList() {
       address: job.address || '',
       time: job.time || '',
       job_type: parseJobTypes(job.job_type),
+      yardage: job.yardage || '',
+      materials: parseMaterials(job.materials),
       status: job.status || 'active',
       materials_ordered: !!job.materials_ordered
     });
@@ -248,6 +251,13 @@ export default function JobList() {
   const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
 
   function renderJobRow(j) {
+    // "(45 yards, Concrete + Pump)" — only the parts that are actually set,
+    // and no empty parens at all if neither is.
+    const parenParts = [];
+    if (j.yardage) parenParts.push(`${j.yardage} yards`);
+    if (j.materials) parenParts.push(formatMaterials(j.materials));
+    const parenText = parenParts.length > 0 ? ` (${parenParts.join(', ')})` : '';
+
     return (
       <div
         key={j.id}
@@ -259,6 +269,7 @@ export default function JobList() {
           <strong>
             {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
             {j.address}
+            {parenText}
           </strong>
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
             {[
@@ -508,6 +519,33 @@ export default function JobList() {
                     value={editForm.time}
                     onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
                   />
+                </Field>
+                <Field label="Yardage">
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={editForm.yardage}
+                    onChange={(e) => setEditForm({ ...editForm, yardage: e.target.value })}
+                  />
+                </Field>
+                <Field label="Materials">
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {MATERIAL_OPTIONS.map((m) => (
+                      <Checkbox
+                        key={m}
+                        label={m}
+                        checked={editForm.materials.includes(m)}
+                        onChange={(_, data) =>
+                          setEditForm({
+                            ...editForm,
+                            materials: data.checked
+                              ? [...editForm.materials, m]
+                              : editForm.materials.filter((x) => x !== m)
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
                 </Field>
                 <Field label="Status">
                   <Dropdown
