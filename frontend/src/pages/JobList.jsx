@@ -37,12 +37,10 @@ const EMPTY_FORM = {
   yardage: '',
   materials: [],
   ordered_materials: [],
-  status: 'active',
   subcontractor_id: '',
   date: ''
 };
 const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
-const STATUS_LABEL = { active: 'Active', completed: 'Completed', cancelled: 'Cancelled' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
 const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Gravel', 'Dumptruck'];
 
@@ -88,10 +86,9 @@ export default function JobList() {
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
-  // Search / status filter — still useful for narrowing which jobs show up
-  // at all, applied before the date/subcontractor grouping below.
+  // Search — still useful for narrowing which jobs show up at all, applied
+  // before the date/subcontractor grouping below.
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState('active');
 
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
@@ -176,8 +173,7 @@ export default function JobList() {
       job_type: parseJobTypes(job.job_type),
       yardage: job.yardage || '',
       materials: parseMaterials(job.materials),
-      ordered_materials: parseMaterials(job.ordered_materials),
-      status: job.status || 'active'
+      ordered_materials: parseMaterials(job.ordered_materials)
     });
     setAssignForm(EMPTY_ASSIGN_FORM);
     setAssignConflictWarning(null);
@@ -275,17 +271,13 @@ export default function JobList() {
   const visibleJobs = useMemo(() => {
     let result = jobs;
 
-    if (statusFilter !== 'all') {
-      result = result.filter((j) => (j.status || 'active') === statusFilter);
-    }
-
     if (searchText.trim()) {
       const q = searchText.trim().toLowerCase();
       result = result.filter((j) => (j.address || '').toLowerCase().includes(q));
     }
 
     return [...result].sort((a, b) => (a.address || '').localeCompare(b.address || ''));
-  }, [jobs, statusFilter, searchText]);
+  }, [jobs, searchText]);
 
   if (loading) return <p>Loading…</p>;
 
@@ -327,7 +319,6 @@ export default function JobList() {
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
             {[
               j.time ? formatTime(j.time) : null,
-              STATUS_LABEL[j.status] || j.status,
               j.materials ? (isFullyOrdered(j) ? 'Materials ordered' : 'Materials pending') : null
             ]
               .filter(Boolean)
@@ -366,18 +357,6 @@ export default function JobList() {
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
-        </Field>
-        <Field label="Status">
-          <Dropdown
-            value={STATUS_LABEL[statusFilter] || 'All'}
-            selectedOptions={[statusFilter]}
-            onOptionSelect={(_, data) => setStatusFilter(data.optionValue)}
-          >
-            <Option value="all">All</Option>
-            <Option value="active">Active</Option>
-            <Option value="completed">Completed</Option>
-            <Option value="cancelled">Cancelled</Option>
-          </Dropdown>
         </Field>
         <Field label="Subcontractor" style={{ minWidth: 200 }}>
           <Combobox
@@ -604,17 +583,6 @@ export default function JobList() {
                   </div>
                 </Field>
               )}
-              <Field label="Status">
-                <Dropdown
-                  value={STATUS_LABEL[form.status] || form.status}
-                  selectedOptions={[form.status]}
-                  onOptionSelect={(_, data) => setForm({ ...form, status: data.optionValue })}
-                >
-                  <Option value="active">Active</Option>
-                  <Option value="completed">Completed</Option>
-                  <Option value="cancelled">Cancelled</Option>
-                </Dropdown>
-              </Field>
 
               <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
               <Field label="Subcontractor">
@@ -748,17 +716,6 @@ export default function JobList() {
                     </div>
                   </Field>
                 )}
-                <Field label="Status">
-                  <Dropdown
-                    value={STATUS_LABEL[editForm.status] || editForm.status}
-                    selectedOptions={[editForm.status]}
-                    onOptionSelect={(_, data) => setEditForm({ ...editForm, status: data.optionValue })}
-                  >
-                    <Option value="active">Active</Option>
-                    <Option value="completed">Completed</Option>
-                    <Option value="cancelled">Cancelled</Option>
-                  </Dropdown>
-                </Field>
                 <Button appearance="primary" type="submit" disabled={saving}>
                   {saving ? 'Saving…' : 'Save changes'}
                 </Button>

@@ -24,7 +24,7 @@ router.get('/', (req, res) => {
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { address, start_date, end_date, time, job_type, yardage, materials, ordered_materials, status } = req.body;
+  const { address, start_date, end_date, time, job_type, yardage, materials, ordered_materials } = req.body;
 
   if (!address) {
     return res.status(400).json({ error: 'address is required' });
@@ -39,8 +39,8 @@ router.post('/', (req, res) => {
 
   const result = db
     .prepare(
-      `INSERT INTO jobs (name, address, start_date, end_date, time, job_type, yardage, materials, ordered_materials, status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO jobs (name, address, start_date, end_date, time, job_type, yardage, materials, ordered_materials, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       name,
@@ -52,7 +52,6 @@ router.post('/', (req, res) => {
       yardage || null,
       normalizeMultiValue(materials),
       normalizeMultiValue(ordered_materials),
-      status || 'active',
       createdBy
     );
 
@@ -73,15 +72,14 @@ router.put('/:id', (req, res) => {
     job_type = existing.job_type,
     yardage = existing.yardage,
     materials = existing.materials,
-    ordered_materials = existing.ordered_materials,
-    status = existing.status
+    ordered_materials = existing.ordered_materials
   } = req.body;
 
   // name always mirrors address now, not a separately-edited value.
   const name = address;
 
   db.prepare(
-    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, yardage = ?, materials = ?, ordered_materials = ?, status = ? WHERE id = ?`
+    `UPDATE jobs SET name = ?, address = ?, start_date = ?, end_date = ?, time = ?, job_type = ?, yardage = ?, materials = ?, ordered_materials = ? WHERE id = ?`
   ).run(
     name,
     address,
@@ -92,7 +90,6 @@ router.put('/:id', (req, res) => {
     yardage,
     normalizeMultiValue(materials),
     normalizeMultiValue(ordered_materials),
-    status,
     id
   );
 
