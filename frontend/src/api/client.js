@@ -28,6 +28,7 @@ export const api = {
   getJobs: (token) => request('/api/jobs', { token }),
   addJob: (token, data) => request('/api/jobs', { method: 'POST', body: data, token }),
   updateJob: (token, id, data) => request(`/api/jobs/${id}`, { method: 'PUT', body: data, token }),
+  deleteJob: (token, id) => request(`/api/jobs/${id}`, { method: 'DELETE', token }),
 
   getAssignments: (token) => request('/api/assignments', { token }),
   addAssignment: (token, data) => request('/api/assignments', { method: 'POST', body: data, token }),

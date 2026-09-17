@@ -195,6 +195,39 @@ export default function JobList() {
     }
   }
 
+  async function handleDeleteJob(job) {
+    if (
+      !window.confirm(
+        `Delete "${job.address}"? This also removes any subcontractor assignment on it. This can't be undone.`
+      )
+    )
+      return;
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.deleteJob(token, job.id);
+      setDrawerContent(null);
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not delete that job.');
+    }
+  }
+
+  // Pre-fills the create form with this job's type/time/yardage/materials
+  // needed — but not its address (almost certainly different for the new
+  // job), not its ordered-materials progress (a new job starts unordered),
+  // and not its assignment (starts unassigned, same as any new job).
+  function handleDuplicateJob(job) {
+    setForm({
+      ...EMPTY_FORM,
+      job_type: parseJobTypes(job.job_type),
+      time: job.time || '',
+      yardage: job.yardage || '',
+      materials: parseMaterials(job.materials)
+    });
+    setDrawerContent('create');
+  }
+
   async function handleAssignSub(e) {
     e.preventDefault();
     setError(null);
@@ -722,6 +755,15 @@ export default function JobList() {
                   {saving ? 'Saving…' : 'Save changes'}
                 </Button>
               </form>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button appearance="secondary" onClick={() => handleDuplicateJob(editingJob)}>
+                  Duplicate this job
+                </Button>
+                <Button appearance="secondary" onClick={() => handleDeleteJob(editingJob)}>
+                  Delete this job
+                </Button>
+              </div>
 
               <div>
                 <h4 style={{ marginBottom: 12 }}>Assigned subcontractors ({jobAssignments.length})</h4>

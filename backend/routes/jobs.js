@@ -96,4 +96,20 @@ router.put('/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM jobs WHERE id = ?').get(id));
 });
 
+// DELETE /api/jobs/:id — a real delete, not a status change. Assignments
+// referencing this job are removed first (job_id there is NOT NULL, so an
+// assignment can't meaningfully outlive its job); todos linked to this job
+// don't need handling here — their own ON DELETE SET NULL already unassigns
+// them automatically, same as when a service assignee gets deleted.
+router.delete('/:id', (req, res) => {
+  const { id } = req.params;
+  const existing = db.prepare('SELECT * FROM jobs WHERE id = ?').get(id);
+  if (!existing) return res.status(404).json({ error: 'Job not found' });
+
+  db.prepare('DELETE FROM assignments WHERE job_id = ?').run(id);
+  db.prepare('DELETE FROM jobs WHERE id = ?').run(id);
+
+  res.json({ ok: true });
+});
+
 module.exports = router;
