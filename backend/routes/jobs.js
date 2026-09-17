@@ -24,7 +24,7 @@ router.get('/', (req, res) => {
 
 // POST /api/jobs
 router.post('/', (req, res) => {
-  const { address, start_date, end_date, job_type, yardage, materials, ordered_materials } = req.body;
+  const { address, start_date, end_date, time, job_type, yardage, materials, ordered_materials, status } = req.body;
 
   if (!address) {
     return res.status(400).json({ error: 'address is required' });
@@ -39,18 +39,20 @@ router.post('/', (req, res) => {
 
   const result = db
     .prepare(
-      `INSERT INTO jobs (name, address, start_date, end_date, job_type, yardage, materials, ordered_materials, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO jobs (name, address, start_date, end_date, time, job_type, yardage, materials, ordered_materials, status, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       name,
       address,
       start_date || null,
       end_date || null,
+      time || null,
       normalizeMultiValue(job_type),
       yardage || null,
       normalizeMultiValue(materials),
       normalizeMultiValue(ordered_materials),
+      status || 'active',
       createdBy
     );
 
