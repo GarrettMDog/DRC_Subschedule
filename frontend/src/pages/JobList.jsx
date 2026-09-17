@@ -434,6 +434,20 @@ export default function JobList() {
           }
           const dateKeys = Object.keys(dateGroups).sort();
 
+          // Within a subcontractor's day, order by the job's own time —
+          // earliest first. A job with no time set falls to the end, same
+          // convention used everywhere else time-sorting happens in this app.
+          for (const date of dateKeys) {
+            for (const subName of Object.keys(dateGroups[date])) {
+              dateGroups[date][subName].sort((a, b) => {
+                if (!a.time && !b.time) return 0;
+                if (!a.time) return 1;
+                if (!b.time) return -1;
+                return a.time.localeCompare(b.time);
+              });
+            }
+          }
+
           if (unassigned.length === 0 && dateKeys.length === 0) {
             if (jobs.length === 0) return <p>No jobs yet. Click "Add job" to create one.</p>;
             return <p>No jobs match your search/filter.</p>;
