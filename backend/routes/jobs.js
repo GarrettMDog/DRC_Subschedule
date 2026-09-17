@@ -35,7 +35,7 @@ router.post('/', (req, res) => {
   // for what's really just a UI simplification. Nothing reads name as a
   // distinct concept from address anywhere in the app anymore.
   const name = address;
-  const createdBy = req.user?.email || null;
+  const createdBy = req.user?.name || req.user?.email || null;
 
   const result = db
     .prepare(

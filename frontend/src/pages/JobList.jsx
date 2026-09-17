@@ -668,6 +668,11 @@ export default function JobList() {
         <DrawerBody>
           {editingJob && editForm && (
             <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {editingJob.created_by && (
+                <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+                  Created by {editingJob.created_by}
+                </div>
+              )}
               <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
                 <Field label="Address" required>
                   <Input
