@@ -18,7 +18,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
-import { formatDateRange, formatDate, formatDateHeader, formatTime } from '../dateUtils';
+import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import {
   STATUS_HEX,
   materialsOrderedColor,
@@ -419,7 +419,13 @@ export default function JobList() {
               : jobsWithAssignment.filter((x) => x.activeAssignment?.subcontractor_id === subFilterId);
 
           const unassigned = filtered.filter((x) => !x.activeAssignment).map((x) => x.job);
-          const assigned = filtered.filter((x) => x.activeAssignment);
+          // Today and future only — a job whose assignment has fully
+          // concluded (end_date before today) drops off, same rule this
+          // used to have back when it lived on the Dashboard's list view.
+          // Unassigned jobs have no date to filter by, so they're exempt —
+          // they always show, same as before.
+          const todayYMD = toYMD(new Date());
+          const assigned = filtered.filter((x) => x.activeAssignment && x.activeAssignment.end_date >= todayYMD);
 
           // Master group: date. Sub-group: subcontractor — same structure
           // the Dashboard's list view used, built from jobs instead of
