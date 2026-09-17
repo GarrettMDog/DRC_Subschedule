@@ -84,7 +84,7 @@ export default function JobList() {
   // the Dashboard's detail panel was removed. Brought back here since
   // assignment management now lives entirely on the job itself.
   const [editingAssignment, setEditingAssignment] = useState(null);
-  const [assignmentEditForm, setAssignmentEditForm] = useState({ date: '' });
+  const [assignmentEditForm, setAssignmentEditForm] = useState({ subcontractor_id: '', date: '' });
   const [savingAssignment, setSavingAssignment] = useState(false);
   const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
@@ -228,7 +228,7 @@ export default function JobList() {
 
   function openEditAssignment(assignment) {
     setAssignmentEditWarning(null);
-    setAssignmentEditForm({ date: assignment.start_date });
+    setAssignmentEditForm({ subcontractor_id: assignment.subcontractor_id, date: assignment.start_date });
     setEditingAssignment(assignment);
   }
 
@@ -240,6 +240,7 @@ export default function JobList() {
     try {
       const token = await getToken();
       const { conflicts } = await api.updateAssignment(token, editingAssignment.id, {
+        subcontractor_id: assignmentEditForm.subcontractor_id,
         start_date: assignmentEditForm.date,
         end_date: assignmentEditForm.date
       });
@@ -780,7 +781,7 @@ export default function JobList() {
                           </div>
                         </div>
                         <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
-                          Edit date
+                          Edit assignment
                         </Button>
                       </div>
                       {a.status !== 'pending' && (
@@ -865,7 +866,7 @@ export default function JobList() {
         </DrawerBody>
       </OverlayDrawer>
 
-      {/* Edit an existing assignment's dates */}
+      {/* Edit an existing assignment — who's assigned, or when */}
       <OverlayDrawer
         open={editingAssignment !== null}
         onOpenChange={(_, { open }) => !open && setEditingAssignment(null)}
@@ -878,7 +879,7 @@ export default function JobList() {
               <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setEditingAssignment(null)} />
             }
           >
-            Edit date — {editingAssignment?.subcontractor_name}
+            Edit assignment
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
@@ -888,6 +889,23 @@ export default function JobList() {
             </MessageBar>
           )}
           <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
+            <Field label="Subcontractor">
+              <Dropdown
+                placeholder="Select a subcontractor"
+                value={
+                  subcontractors.find((s) => s.id === assignmentEditForm.subcontractor_id)?.company_name || ''
+                }
+                onOptionSelect={(_, data) =>
+                  setAssignmentEditForm({ ...assignmentEditForm, subcontractor_id: Number(data.optionValue) })
+                }
+              >
+                {subcontractors.map((s) => (
+                  <Option key={s.id} value={String(s.id)}>
+                    {s.company_name}
+                  </Option>
+                ))}
+              </Dropdown>
+            </Field>
             <Field label="Date">
               <Input
                 type="date"

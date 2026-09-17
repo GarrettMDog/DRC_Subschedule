@@ -46,21 +46,26 @@ router.post('/', (req, res) => {
   // TODO: notify the sub of the new assignment (email/SMS) once a provider is wired up.
 });
 
-// PUT /api/assignments/:id — reschedule, edit notes, or change status from the office side
+// PUT /api/assignments/:id — reschedule, reassign to a different sub, edit
+// notes, or change status from the office side
 router.put('/:id', (req, res) => {
   const { id } = req.params;
   const existing = db.prepare('SELECT * FROM assignments WHERE id = ?').get(id);
   if (!existing) return res.status(404).json({ error: 'Assignment not found' });
 
   const {
+    subcontractor_id = existing.subcontractor_id,
     start_date = existing.start_date,
     end_date = existing.end_date,
     status = existing.status,
     notes = existing.notes
   } = req.body;
 
+  // Conflict check runs against whichever sub this assignment now belongs
+  // to — if the sub is being changed, that's the one who actually needs
+  // checking, not the one being replaced.
   const conflicts = findConflicts({
-    subcontractorId: existing.subcontractor_id,
+    subcontractorId: subcontractor_id,
     startDate: start_date,
     endDate: end_date,
     excludeAssignmentId: id
@@ -68,9 +73,9 @@ router.put('/:id', (req, res) => {
 
   db.prepare(
     `UPDATE assignments
-     SET start_date = ?, end_date = ?, status = ?, notes = ?, updated_at = datetime('now')
+     SET subcontractor_id = ?, start_date = ?, end_date = ?, status = ?, notes = ?, updated_at = datetime('now')
      WHERE id = ?`
-  ).run(start_date, end_date, status, notes, id);
+  ).run(subcontractor_id, start_date, end_date, status, notes, id);
 
   res.json({ assignment: db.prepare('SELECT * FROM assignments WHERE id = ?').get(id), conflicts });
 });
