@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@fluentui/react-components';
-import { materialsOrderedColor, isFullyOrdered } from '../theme';
+import { materialsOrderedColor, materialsOrderStatus } from '../theme';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PILLS_PER_DAY = 3;
@@ -131,6 +131,10 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
               {visible.map((a) => {
                 const isSelected = selectedJobId === a.job_id;
                 const isDimmed = selectedJobId !== null && !isSelected;
+                const orderStatus = materialsOrderStatus(a);
+                const orderStatusLabel = { none: 'not ordered', partial: 'partially ordered', full: 'ordered' }[
+                  orderStatus
+                ];
                 return (
                   <button
                     key={a.id}
@@ -138,10 +142,8 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
                     className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
                       isDimmed ? 'is-dimmed' : ''
                     }`}
-                    style={{ background: materialsOrderedColor(isFullyOrdered(a)) }}
-                    title={`${a.subcontractor_name} → ${a.job_address} — materials ${
-                      isFullyOrdered(a) ? 'ordered' : 'not ordered'
-                    }`}
+                    style={{ background: materialsOrderedColor(orderStatus) }}
+                    title={`${a.subcontractor_name} → ${a.job_address} — materials ${orderStatusLabel}`}
                     onClick={() => togglePillSelection(a)}
                   >
                     {labelMode === 'job' ? a.job_address : a.subcontractor_name}

@@ -44,14 +44,14 @@ export const JOB_STATUS_HEX = {
 };
 
 /**
- * Red until materials are marked ordered, then green. Used as the primary
- * visual accent for jobs everywhere they appear (Jobs tab, Calendar,
- * a subcontractor's job history). Takes a plain boolean — callers compute
- * that boolean via isFullyOrdered() below, which is what actually decides
- * whether a job counts as "ordered" now.
+ * Red / yellow / green based on how much of a job's needed materials are
+ * marked ordered. Takes the three-state string computed by
+ * materialsOrderStatus() below — never a raw job object.
  */
-export function materialsOrderedColor(isOrdered) {
-  return isOrdered ? '#1E7C4D' : '#B42318';
+export function materialsOrderedColor(status) {
+  if (status === 'full') return '#1E7C4D'; // green — every needed material is ordered
+  if (status === 'partial') return '#F2A736'; // amber — matches the app's own brand accent
+  return '#B42318'; // red — none ordered yet, or nothing specified at all
 }
 
 /**
@@ -104,17 +104,18 @@ export function parseMaterials(materials) {
 }
 
 /**
- * Replaces the old single "materials ordered" boolean. Each needed material
- * now has its own ordered/not-ordered status, tracked as a second
- * comma-separated list (`ordered_materials`) of which needed materials have
- * been marked ordered so far. A job counts as fully ordered only once every
- * material it needs also appears in that ordered list — red otherwise.
- * A job with no materials specified at all is treated as not ordered
- * (there's nothing to vacuously satisfy; it just hasn't been set up yet).
+ * Three-state materials-ordered status for a job:
+ * - 'none' — nothing ordered yet, or no materials specified at all (there's
+ *   nothing to vacuously satisfy; it just hasn't been set up yet)
+ * - 'partial' — some but not all needed materials are marked ordered
+ * - 'full' — every needed material is marked ordered
  */
-export function isFullyOrdered(job) {
+export function materialsOrderStatus(job) {
   const needed = parseMaterials(job.materials);
-  if (needed.length === 0) return false;
+  if (needed.length === 0) return 'none';
   const ordered = parseMaterials(job.ordered_materials);
-  return needed.every((m) => ordered.includes(m));
+  const orderedCount = needed.filter((m) => ordered.includes(m)).length;
+  if (orderedCount === 0) return 'none';
+  if (orderedCount === needed.length) return 'full';
+  return 'partial';
 }

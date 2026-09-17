@@ -26,7 +26,7 @@ import {
   parseJobTypes,
   formatMaterials,
   parseMaterials,
-  isFullyOrdered
+  materialsOrderStatus
 } from '../theme';
 
 // No more separate "Job name" concept — address is the sole identifier now.
@@ -303,11 +303,16 @@ export default function JobList() {
     if (j.materials) parenParts.push(formatMaterials(j.materials));
     const parenText = parenParts.length > 0 ? ` (${parenParts.join(', ')})` : '';
 
+    const orderStatus = materialsOrderStatus(j);
+    const orderStatusText = { none: 'Materials pending', partial: 'Some materials ordered', full: 'Materials ordered' }[
+      orderStatus
+    ];
+
     return (
       <div
         key={j.id}
         className="list-row"
-        style={{ '--status-color': materialsOrderedColor(isFullyOrdered(j)) }}
+        style={{ '--status-color': materialsOrderedColor(orderStatus) }}
         onClick={() => openJobDetail(j)}
       >
         <div>
@@ -317,10 +322,7 @@ export default function JobList() {
             {parenText}
           </strong>
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-            {[
-              j.time ? formatTime(j.time) : null,
-              j.materials ? (isFullyOrdered(j) ? 'Materials ordered' : 'Materials pending') : null
-            ]
+            {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
               .filter(Boolean)
               .join(' · ')}
           </div>
