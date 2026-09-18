@@ -1,4 +1,4 @@
-import { createLightTheme } from '@fluentui/react-components';
+import { createLightTheme, createDarkTheme } from '@fluentui/react-components';
 
 // A warm amber/construction-safety accent — deliberately not Fluent's default
 // blue, and not the generic cream+terracotta pairing common in AI-generated
@@ -25,6 +25,7 @@ const brand = {
 };
 
 export const subscheduleTheme = createLightTheme(brand);
+export const subscheduleDarkTheme = createDarkTheme(brand);
 
 // Status colors used consistently across the dashboard list, the calendar,
 // and the sub-facing schedule page — kept outside the Fluent theme since

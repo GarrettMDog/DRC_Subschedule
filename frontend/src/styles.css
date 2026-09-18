@@ -1,3 +1,14 @@
+body {
+  margin: 0;
+  background: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #292929;
+  }
+}
+
 /* Mobile-first: single column by default. Wider screens get a real two-pane
    layout (form/actions on the left, content on the right) instead of a
    narrow strip of controls floating in a sea of empty space. */
@@ -113,7 +124,7 @@
 }
 
 .calendar-pill.is-selected-job {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--colorNeutralForeground1);
+  box-shadow: 0 0 0 2px var(--colorNeutralBackground1), 0 0 0 4px var(--colorNeutralForeground1);
   transform: scale(1.03);
 }
 
