@@ -30,7 +30,7 @@ router.post('/', (req, res) => {
     });
   }
 
-  const conflicts = findConflicts({ subcontractorId: subcontractor_id, startDate: start_date, endDate: end_date });
+  const conflicts = findConflicts({ subcontractorId: subcontractor_id, jobId: job_id, startDate: start_date, endDate: end_date });
 
   const result = db
     .prepare(
@@ -66,6 +66,7 @@ router.put('/:id', (req, res) => {
   // checking, not the one being replaced.
   const conflicts = findConflicts({
     subcontractorId: subcontractor_id,
+    jobId: existing.job_id,
     startDate: start_date,
     endDate: end_date,
     excludeAssignmentId: id

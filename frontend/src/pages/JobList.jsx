@@ -217,15 +217,40 @@ export default function JobList() {
   // needed — but not its address (almost certainly different for the new
   // job), not its ordered-materials progress (a new job starts unordered),
   // and not its assignment (starts unassigned, same as any new job).
-  function handleDuplicateJob(job) {
-    setForm({
-      ...EMPTY_FORM,
-      job_type: parseJobTypes(job.job_type),
-      time: job.time || '',
-      yardage: job.yardage || '',
-      materials: parseMaterials(job.materials)
-    });
-    setDrawerContent('create');
+  // A genuinely complete clone now — address and every current active
+  // assignment (subcontractor + date) carry over, not just the job's own
+  // fields. Cancelled/declined assignments don't get cloned — those
+  // represent something that didn't happen, not something to repeat.
+  async function handleDuplicateJob(job) {
+    setError(null);
+    try {
+      const token = await getToken();
+      const newJob = await api.addJob(token, {
+        address: job.address,
+        job_type: parseJobTypes(job.job_type),
+        time: job.time || '',
+        yardage: job.yardage || '',
+        materials: parseMaterials(job.materials),
+        ordered_materials: parseMaterials(job.ordered_materials)
+      });
+
+      const sourceAssignments = assignments.filter(
+        (a) => a.job_id === job.id && a.status !== 'cancelled' && a.status !== 'declined'
+      );
+      for (const a of sourceAssignments) {
+        await api.addAssignment(token, {
+          subcontractor_id: a.subcontractor_id,
+          job_id: newJob.id,
+          start_date: a.start_date,
+          end_date: a.end_date
+        });
+      }
+
+      await load();
+      openJobDetail(newJob);
+    } catch (err) {
+      setError(err.message || 'Could not duplicate that job.');
+    }
   }
 
   async function handleAssignSub(e) {
@@ -317,12 +342,6 @@ export default function JobList() {
   const isCreating = drawerContent === 'create';
   const editingJob = drawerContent && drawerContent !== 'create' ? drawerContent : null;
   const jobAssignments = editingJob ? assignments.filter((a) => a.job_id === editingJob.id) : [];
-  // One sub per job, total — same rule the Dashboard used to enforce via its
-  // job picker. Cancelled/declined don't count as "occupying" the job, so
-  // the assign form reappears once an assignment there is cancelled.
-  const activeJobAssignments = jobAssignments.filter(
-    (a) => a.status !== 'cancelled' && a.status !== 'declined'
-  );
   // Driven only by job_id and the to-do's own completed flag — never by the
   // job's status, so a to-do on a "Completed" job still shows until it's
   // checked off itself.
@@ -351,7 +370,15 @@ export default function JobList() {
         <div>
           <strong>
             {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
-            {j.address}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ color: 'inherit', textDecoration: 'underline' }}
+            >
+              {j.address}
+            </a>
             {parenText}
           </strong>
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
@@ -417,41 +444,48 @@ export default function JobList() {
 
       <div>
         {(() => {
-          // Each visible job's active assignment, if any — one sub per job,
-          // so at most one active assignment is ever relevant here.
-          const jobsWithAssignment = visibleJobs.map((j) => ({
+          // Each visible job's active assignments — now that multiple subs
+          // can work the same job (one for prep, another for the pour, or
+          // the same sub back on a separate non-consecutive date), a job
+          // can have more than one.
+          const jobsWithAssignments = visibleJobs.map((j) => ({
             job: j,
-            activeAssignment: assignments.find(
+            activeAssignments: assignments.filter(
               (a) => a.job_id === j.id && a.status !== 'cancelled' && a.status !== 'declined'
             )
           }));
 
           // Filtering by a specific subcontractor hides everything else,
-          // unassigned jobs included, same as the Dashboard's old behavior.
+          // unassigned jobs included — but now checks whether ANY of a
+          // job's assignments match, not just a single one.
           const filtered =
             subFilterId === null
-              ? jobsWithAssignment
-              : jobsWithAssignment.filter((x) => x.activeAssignment?.subcontractor_id === subFilterId);
+              ? jobsWithAssignments
+              : jobsWithAssignments.filter((x) =>
+                  x.activeAssignments.some((a) => a.subcontractor_id === subFilterId)
+                );
 
-          const unassigned = filtered.filter((x) => !x.activeAssignment).map((x) => x.job);
-          // Today and future only — a job whose assignment has fully
-          // concluded (end_date before today) drops off, same rule this
-          // used to have back when it lived on the Dashboard's list view.
-          // Unassigned jobs have no date to filter by, so they're exempt —
-          // they always show, same as before.
+          const unassigned = filtered.filter((x) => x.activeAssignments.length === 0).map((x) => x.job);
+
+          // Today and future only — a fully concluded assignment drops off,
+          // same rule this used to have on the Dashboard's old list view.
           const todayYMD = toYMD(new Date());
-          const assigned = filtered.filter((x) => x.activeAssignment && x.activeAssignment.end_date >= todayYMD);
 
-          // Master group: date. Sub-group: subcontractor — same structure
-          // the Dashboard's list view used, built from jobs instead of
-          // assignments since this page lists jobs.
+          // Master group: date. Sub-group: subcontractor. A job with
+          // multiple assignments now correctly appears under each one —
+          // e.g. under both Wednesday/Sub A and Monday/Sub B, since those
+          // are genuinely different working days for this job.
           const dateGroups = {};
-          for (const { job, activeAssignment } of assigned) {
-            const date = activeAssignment.start_date;
-            const subName = activeAssignment.subcontractor_name;
-            if (!dateGroups[date]) dateGroups[date] = {};
-            if (!dateGroups[date][subName]) dateGroups[date][subName] = [];
-            dateGroups[date][subName].push(job);
+          for (const { job, activeAssignments } of filtered) {
+            for (const a of activeAssignments) {
+              if (a.end_date < todayYMD) continue;
+              if (subFilterId !== null && a.subcontractor_id !== subFilterId) continue;
+              const date = a.start_date;
+              const subName = a.subcontractor_name;
+              if (!dateGroups[date]) dateGroups[date] = {};
+              if (!dateGroups[date][subName]) dateGroups[date][subName] = [];
+              dateGroups[date][subName].push(job);
+            }
           }
           const dateKeys = Object.keys(dateGroups).sort();
 
@@ -800,47 +834,43 @@ export default function JobList() {
                   {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}
                 </div>
 
-                {/* One sub per job — this only shows when the job doesn't
-                    already have an active (non-cancelled) assignment. */}
-                {activeJobAssignments.length === 0 && (
-                  <div style={{ marginTop: 16 }}>
-                    <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
-                    {assignConflictWarning && (
-                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-                        <MessageBarBody>{assignConflictWarning}</MessageBarBody>
-                      </MessageBar>
-                    )}
-                    <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
-                      <Field label="Subcontractor" required>
-                        <Dropdown
-                          placeholder="Select a subcontractor"
-                          value={
-                            subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
-                          }
-                          onOptionSelect={(_, data) =>
-                            setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
-                          }
-                        >
-                          {subcontractors.map((s) => (
-                            <Option key={s.id} value={String(s.id)}>
-                              {s.company_name}
-                            </Option>
-                          ))}
-                        </Dropdown>
-                      </Field>
-                      <Field label="Date" required>
-                        <Input
-                          type="date"
-                          value={assignForm.date}
-                          onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
-                        />
-                      </Field>
-                      <Button appearance="primary" type="submit" disabled={assigning}>
-                        {assigning ? 'Assigning…' : 'Assign'}
-                      </Button>
-                    </form>
-                  </div>
-                )}
+                <div style={{ marginTop: 16 }}>
+                  <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
+                  {assignConflictWarning && (
+                    <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+                      <MessageBarBody>{assignConflictWarning}</MessageBarBody>
+                    </MessageBar>
+                  )}
+                  <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
+                    <Field label="Subcontractor" required>
+                      <Dropdown
+                        placeholder="Select a subcontractor"
+                        value={
+                          subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
+                        }
+                        onOptionSelect={(_, data) =>
+                          setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
+                        }
+                      >
+                        {subcontractors.map((s) => (
+                          <Option key={s.id} value={String(s.id)}>
+                            {s.company_name}
+                          </Option>
+                        ))}
+                      </Dropdown>
+                    </Field>
+                    <Field label="Date" required>
+                      <Input
+                        type="date"
+                        value={assignForm.date}
+                        onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
+                      />
+                    </Field>
+                    <Button appearance="primary" type="submit" disabled={assigning}>
+                      {assigning ? 'Assigning…' : 'Assign'}
+                    </Button>
+                  </form>
+                </div>
               </div>
 
               <div>
