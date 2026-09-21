@@ -16,5 +16,11 @@ export const loginRequest = {
   // scope), not Microsoft Graph. The backend validates audience === its own
   // Client ID, so a Graph-scoped token (e.g. 'User.Read') would always be
   // rejected as invalid — it was never meant for this API in the first place.
-  scopes: [`api://${import.meta.env.VITE_ENTRA_CLIENT_ID}/access_as_user`]
+  // The Application ID URI includes the hosting domain (not just the bare
+  // client ID) specifically so Teams SSO can validate the tab's origin
+  // against it — a bare api://<client-id> URI works for this browser flow
+  // alone, but Teams itself requires the domain-based form.
+  scopes: [
+    `api://${import.meta.env.VITE_ENTRA_APP_URI_DOMAIN}/${import.meta.env.VITE_ENTRA_CLIENT_ID}/access_as_user`
+  ]
 };

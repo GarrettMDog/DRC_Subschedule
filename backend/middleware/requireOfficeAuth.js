@@ -5,10 +5,17 @@ const jwksClient = require('jwks-rsa');
 // Requires TENANT_ID and CLIENT_ID (the app registration's Application ID) in .env.
 const TENANT_ID = process.env.ENTRA_TENANT_ID;
 const CLIENT_ID = process.env.ENTRA_CLIENT_ID;
-// Tokens issued for this app's own exposed API scope (api://<client-id>/access_as_user)
-// carry that full URI as the audience — not the bare client ID GUID — confirmed
-// directly from a decoded live token, despite general docs suggesting otherwise.
-const EXPECTED_AUDIENCE = `api://${CLIENT_ID}`;
+// Teams SSO (getAuthToken() from inside a Teams tab) requires the app
+// registration's Application ID URI to include the actual hosting domain —
+// a bare api://<client-id> URI works fine for the regular browser MSAL
+// flow, but Teams specifically checks that the domain in this URI matches
+// the domain the tab is served from, and rejects SSO with "App resource
+// defined in manifest and iframe origin do not match" otherwise. Once the
+// Application ID URI is switched to include the domain (in Entra's "Expose
+// an API" screen), tokens for both browser and Teams sign-in carry that
+// same domain-based URI as their audience, so this needs to match exactly.
+const APP_URI_DOMAIN = process.env.ENTRA_APP_URI_DOMAIN;
+const EXPECTED_AUDIENCE = `api://${APP_URI_DOMAIN}/${CLIENT_ID}`;
 // The token's actual issuer format, confirmed directly from a decoded live
 // token rather than assumed — this app registration issues v1.0-style
 // issuer URIs (sts.windows.net) for this custom API scope, not the v2.0
