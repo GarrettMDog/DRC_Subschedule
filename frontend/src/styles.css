@@ -16,21 +16,20 @@ body {
    should read as a quiet accent in either theme). Light and dark get their
    own tuned colors instead, since a single fixed color compromises contrast
    in one theme or the other. */
+/* Tagline under the app title. Plain colored text, deliberately no
+   background box — a tinted background here kept reading as a
+   highlighted/selected element no matter how muted the color, so this
+   stays as just text with no fill at all. */
 .header-tagline {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: var(--borderRadiusMedium, 4px);
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 10px;
   color: #a16812;
-  background: rgba(242, 167, 54, 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   .header-tagline {
     color: #c9ad82;
-    background: rgba(242, 167, 54, 0.16);
   }
 }
 
