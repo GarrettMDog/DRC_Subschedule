@@ -29,7 +29,7 @@ body {
 
 @media (prefers-color-scheme: dark) {
   .header-tagline {
-    color: #f2c069;
+    color: #c9ad82;
     background: rgba(242, 167, 54, 0.16);
   }
 }
