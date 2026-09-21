@@ -22,7 +22,21 @@ export default function OfficeLayout({ children }) {
           zIndex: 10
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>SubSchedule</div>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>CreOps</div>
+        <div
+          style={{
+            display: 'inline-block',
+            padding: '4px 10px',
+            borderRadius: 'var(--borderRadiusMedium, 4px)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--colorBrandForeground1)',
+            background: 'var(--colorBrandBackground2)',
+            marginBottom: 10
+          }}
+        >
+          Curing your workload
+        </div>
         {/* Plain flex-wrap nav, not Fluent's TabList — TabList is documented to never
             wrap or scroll on narrow containers (Fluent's own usage guidance), so on a
             phone-width screen with 3 labels including "Subcontractors" it would just
