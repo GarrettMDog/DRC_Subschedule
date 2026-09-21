@@ -1,5 +1,7 @@
 import { useMsal } from '@azure/msal-react';
 import { loginRequest } from './msalConfig';
+import { useIsTeams } from './TeamsContext';
+import { getTeamsToken } from './teamsAuth';
 
 // MSAL's silent renewal can fall back to a hidden iframe, which Microsoft's
 // own docs confirm can hang for up to 60 seconds in some browsers (tracking
@@ -26,8 +28,17 @@ function withTimeout(promise, ms) {
  */
 export function useApiToken() {
   const { instance, accounts } = useMsal();
+  const isTeams = useIsTeams();
 
   async function getToken() {
+    if (isTeams) {
+      // No account cache to check, no silent/redirect dance — Teams itself
+      // already knows who's signed in and hands back a token for it
+      // directly. Called fresh each time per Microsoft's own guidance,
+      // rather than cached here; Teams handles caching/renewal internally.
+      return getTeamsToken();
+    }
+
     const account = accounts[0];
 
     if (!account) {
