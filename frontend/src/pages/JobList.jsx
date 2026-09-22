@@ -222,6 +222,11 @@ export default function JobList() {
   // fields. Cancelled/declined assignments don't get cloned — those
   // represent something that didn't happen, not something to repeat.
   async function handleDuplicateJob(job) {
+    const confirmed = await confirm(
+      `Duplicate "${job.address}"? This creates a new job with the same type, time, yardage, and materials — plus a copy of every subcontractor currently assigned to it, on the same dates. You'll be able to review and edit the new job right after.`,
+      { confirmLabel: 'Duplicate' }
+    );
+    if (!confirmed) return;
     setError(null);
     try {
       const token = await getToken();

@@ -21,22 +21,23 @@ import {
  *   const { confirm, dialog } = useConfirmDialog();
  *   ...
  *   if (!(await confirm('Delete this job?'))) return;
+ *   if (!(await confirm('Duplicate this job?', { confirmLabel: 'Duplicate' }))) return;
  *   ...
  *   return <>{dialog}{...rest of the UI}</>;
  */
 export function useConfirmDialog() {
-  const [state, setState] = useState({ open: false, message: '' });
+  const [state, setState] = useState({ open: false, message: '', confirmLabel: 'Delete' });
   const resolveRef = useRef(null);
 
-  const confirm = useCallback((message) => {
-    setState({ open: true, message });
+  const confirm = useCallback((message, options = {}) => {
+    setState({ open: true, message, confirmLabel: options.confirmLabel || 'Delete' });
     return new Promise((resolve) => {
       resolveRef.current = resolve;
     });
   }, []);
 
   function handleResult(result) {
-    setState({ open: false, message: '' });
+    setState((prev) => ({ ...prev, open: false }));
     if (resolveRef.current) {
       resolveRef.current(result);
       resolveRef.current = null;
@@ -54,7 +55,7 @@ export function useConfirmDialog() {
               Cancel
             </Button>
             <Button appearance="primary" onClick={() => handleResult(true)}>
-              Delete
+              {state.confirmLabel}
             </Button>
           </DialogActions>
         </DialogBody>
