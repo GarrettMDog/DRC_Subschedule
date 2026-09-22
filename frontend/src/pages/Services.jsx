@@ -18,12 +18,14 @@ import { Dismiss24Regular, Delete20Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDate } from '../dateUtils';
+import { useConfirmDialog } from '../components/useConfirmDialog';
 
 const EMPTY_TODO_FORM = { title: '', description: '', assignee_id: '', job_id: '', due_date: '' };
 const EMPTY_ASSIGNEE_FORM = { name: '', email: '', phone: '' };
 
 export default function Services() {
   const { getToken } = useApiToken();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [todos, setTodos] = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -126,7 +128,8 @@ export default function Services() {
   }
 
   async function handleDeleteTodo(todo) {
-    if (!window.confirm(`Delete "${todo.title}"? This can't be undone.`)) return;
+    const confirmed = await confirm(`Delete "${todo.title}"? This can't be undone.`);
+    if (!confirmed) return;
     setError(null);
     try {
       const token = await getToken();
@@ -175,6 +178,7 @@ export default function Services() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+      {confirmDialog}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>

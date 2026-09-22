@@ -18,6 +18,7 @@ import {
 import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
+import { useConfirmDialog } from '../components/useConfirmDialog';
 import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import {
   STATUS_HEX,
@@ -53,6 +54,7 @@ const ASSIGNMENT_STATUS_COLOR = {
 
 export default function JobList() {
   const { getToken } = useApiToken();
+  const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [jobs, setJobs] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [todos, setTodos] = useState([]);
@@ -196,12 +198,10 @@ export default function JobList() {
   }
 
   async function handleDeleteJob(job) {
-    if (
-      !window.confirm(
-        `Delete "${job.address}"? This also removes any subcontractor assignment on it. This can't be undone.`
-      )
-    )
-      return;
+    const confirmed = await confirm(
+      `Delete "${job.address}"? This also removes any subcontractor assignment on it. This can't be undone.`
+    );
+    if (!confirmed) return;
     setError(null);
     try {
       const token = await getToken();
@@ -394,6 +394,7 @@ export default function JobList() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {confirmDialog}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
