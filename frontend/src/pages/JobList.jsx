@@ -19,6 +19,7 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { useConfirmDialog } from '../components/useConfirmDialog';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import {
   STATUS_HEX,
@@ -583,7 +584,10 @@ export default function JobList() {
           <div style={{ maxWidth: 700, margin: '0 auto' }}>
             <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
               <Field label="Address" required>
-                <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+                <AddressAutocomplete
+                  value={form.address}
+                  onChange={(newValue) => setForm({ ...form, address: newValue })}
+                />
               </Field>
               <Field label="Job type" required>
                 <Dropdown
@@ -715,9 +719,9 @@ export default function JobList() {
               )}
               <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
                 <Field label="Address" required>
-                  <Input
+                  <AddressAutocomplete
                     value={editForm.address}
-                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    onChange={(newValue) => setEditForm({ ...editForm, address: newValue })}
                   />
                 </Field>
                 <Field label="Job type" required>
