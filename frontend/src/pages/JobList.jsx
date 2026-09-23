@@ -359,10 +359,17 @@ export default function JobList() {
   const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
 
   function renderJobRow(j) {
-    // "(45 yards, Concrete + Pump)" — only the parts that are actually set,
-    // and no empty parens at all if neither is.
+    // "(45 yards @ 10:00 AM, Concrete + Pump)" — yardage and time combined
+    // with @ when both are set; falls back to whichever one is actually
+    // present (no dangling @ with nothing on one side of it) if only one
+    // is set, and drops this part of the parenthetical entirely if neither is.
+    const yardageTimeParts = [];
+    if (j.yardage) yardageTimeParts.push(`${j.yardage} yards`);
+    if (j.time) yardageTimeParts.push(formatTime(j.time));
+    const yardageTimeText = yardageTimeParts.join(' @ ');
+
     const parenParts = [];
-    if (j.yardage) parenParts.push(`${j.yardage} yards`);
+    if (yardageTimeText) parenParts.push(yardageTimeText);
     if (j.materials) parenParts.push(formatMaterials(j.materials));
     const parenText = parenParts.length > 0 ? ` (${parenParts.join(', ')})` : '';
 
@@ -400,9 +407,7 @@ export default function JobList() {
             {parenText}
           </strong>
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-            {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
-              .filter(Boolean)
-              .join(' · ')}
+            {j.materials ? orderStatusText : ''}
           </div>
         </div>
         <ChevronRight20Regular />
