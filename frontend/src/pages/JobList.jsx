@@ -562,9 +562,13 @@ export default function JobList() {
                 <div key={dateKey} style={{ marginBottom: 20 }}>
                   <h4
                     style={{
-                      margin: '0 0 10px',
-                      paddingBottom: 6,
-                      borderBottom: '1px solid var(--colorNeutralStroke2)'
+                      margin: 0,
+                      padding: '10px 0',
+                      borderBottom: '1px solid var(--colorNeutralStroke2)',
+                      position: 'sticky',
+                      top: 'var(--header-height, 0px)',
+                      zIndex: 5,
+                      background: 'var(--colorNeutralBackground1)'
                     }}
                   >
                     {formatDateHeader(dateKey)}

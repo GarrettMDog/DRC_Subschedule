@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const NAV_ITEMS = [
@@ -9,10 +10,30 @@ const NAV_ITEMS = [
 
 export default function OfficeLayout({ children }) {
   const location = useLocation();
+  const headerRef = useRef(null);
+
+  // The header's height isn't fixed — the nav row wraps to a second line
+  // on narrow/mobile screens (see the comment below), so anything else
+  // that needs to stick just below it (like the Jobs tab's per-date sticky
+  // headers) can't safely assume a hardcoded pixel offset. Measuring the
+  // real rendered height and exposing it as a CSS variable means it stays
+  // correct regardless of screen width, font size, or nav wrapping.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const updateHeight = () => {
+      document.documentElement.style.setProperty('--header-height', `${el.offsetHeight}px`);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div>
       <header
+        ref={headerRef}
         style={{
           padding: '12px 16px',
           borderBottom: '1px solid var(--colorNeutralStroke2)',
