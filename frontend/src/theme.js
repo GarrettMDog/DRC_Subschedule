@@ -113,7 +113,9 @@ export function parseMaterials(materials) {
  */
 export function materialsOrderStatus(job) {
   const needed = parseMaterials(job.materials);
-  if (needed.length === 0) return 'none';
+  // Nothing needed means nothing's missing — there's no order to be
+  // waiting on, so this counts as fully satisfied, not a red flag.
+  if (needed.length === 0) return 'full';
   const ordered = parseMaterials(job.ordered_materials);
   const orderedCount = needed.filter((m) => ordered.includes(m)).length;
   if (orderedCount === 0) return 'none';
