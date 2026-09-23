@@ -3,6 +3,7 @@ import {
   Button,
   Field,
   Input,
+  Textarea,
   Dropdown,
   Option,
   Combobox,
@@ -20,6 +21,7 @@ import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { useConfirmDialog } from '../components/useConfirmDialog';
 import AddressAutocomplete from '../components/AddressAutocomplete';
+import LeafIcon from '../components/LeafIcon';
 import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import {
   STATUS_HEX,
@@ -39,6 +41,7 @@ const EMPTY_FORM = {
   yardage: '',
   materials: [],
   ordered_materials: [],
+  notes: '',
   subcontractor_id: '',
   date: ''
 };
@@ -176,7 +179,8 @@ export default function JobList() {
       job_type: parseJobTypes(job.job_type),
       yardage: job.yardage || '',
       materials: parseMaterials(job.materials),
-      ordered_materials: parseMaterials(job.ordered_materials)
+      ordered_materials: parseMaterials(job.ordered_materials),
+      notes: job.notes || ''
     });
     setAssignForm(EMPTY_ASSIGN_FORM);
     setAssignConflictWarning(null);
@@ -224,7 +228,7 @@ export default function JobList() {
   // represent something that didn't happen, not something to repeat.
   async function handleDuplicateJob(job) {
     const confirmed = await confirm(
-      `Duplicate "${job.address}"? This creates a new job with the same type, time, yardage, and materials — plus a copy of every subcontractor currently assigned to it, on the same dates. You'll be able to review and edit the new job right after.`,
+      `Duplicate "${job.address}"? This creates a new job with the same type, time, yardage, materials, and notes — plus a copy of every subcontractor currently assigned to it, on the same dates. You'll be able to review and edit the new job right after.`,
       { confirmLabel: 'Duplicate' }
     );
     if (!confirmed) return;
@@ -237,7 +241,8 @@ export default function JobList() {
         time: job.time || '',
         yardage: job.yardage || '',
         materials: parseMaterials(job.materials),
-        ordered_materials: parseMaterials(job.ordered_materials)
+        ordered_materials: parseMaterials(job.ordered_materials),
+        notes: job.notes || ''
       });
 
       const sourceAssignments = assignments.filter(
@@ -387,10 +392,21 @@ export default function JobList() {
             </a>
             {parenText}
           </strong>
-          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-            {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
-              .filter(Boolean)
-              .join(' · ')}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 12,
+              color: 'var(--colorNeutralForeground3)'
+            }}
+          >
+            <span>
+              {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            {j.notes && <LeafIcon size={13} title="Has notes" />}
           </div>
         </div>
         <ChevronRight20Regular />
@@ -663,6 +679,14 @@ export default function JobList() {
                 </Field>
               )}
 
+              <Field label="Notes">
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  resize="vertical"
+                />
+              </Field>
+
               <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
               <Field label="Subcontractor">
                 <Dropdown
@@ -800,6 +824,13 @@ export default function JobList() {
                     </div>
                   </Field>
                 )}
+                <Field label="Notes">
+                  <Textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    resize="vertical"
+                  />
+                </Field>
                 <Button appearance="primary" type="submit" disabled={saving}>
                   {saving ? 'Saving…' : 'Save changes'}
                 </Button>

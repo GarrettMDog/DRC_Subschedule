@@ -35,6 +35,7 @@ db.exec(`
     yardage TEXT,
     materials TEXT,
     ordered_materials TEXT,
+    notes TEXT,
     status TEXT NOT NULL DEFAULT 'active',
     materials_ordered INTEGER NOT NULL DEFAULT 0,
     created_by TEXT,
@@ -134,6 +135,11 @@ if (!hasOrderedMaterials) {
     SET ordered_materials = materials
     WHERE materials_ordered = 1 AND materials IS NOT NULL
   `);
+}
+
+const hasNotes = jobColumns.some((col) => col.name === 'notes');
+if (!hasNotes) {
+  db.exec('ALTER TABLE jobs ADD COLUMN notes TEXT');
 }
 
 module.exports = db;
