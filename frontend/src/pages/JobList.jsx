@@ -43,7 +43,7 @@ const EMPTY_FORM = {
   date: ''
 };
 const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
-const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour'];
+const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour', 'Replace', 'Form Wall', 'Dig Ftg', 'Service'];
 const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Gravel', 'Dumptruck'];
 
 const ASSIGNMENT_STATUS_COLOR = {
