@@ -1,22 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
+import { MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
-import { STATUS_HEX, formatJobType, formatMaterials, materialsOrderStatus } from '../theme';
+import { formatJobType, formatMaterials, materialsOrderStatus } from '../theme';
 import { formatTime, formatDateHeader } from '../dateUtils';
 import LeafIcon from '../components/LeafIcon';
 
-// Read-only for subs now — no confirm/decline action, so "pending" no longer
-// means "awaiting a response." Relabeled to avoid implying something's
-// outstanding when there's nothing left to do. Declined/confirmed are kept
-// here too in case any assignment already has one of those statuses from
-// before this change — nothing breaks for existing data.
-const STATUS_DISPLAY = {
-  pending: { label: 'Scheduled', color: 'success', hex: STATUS_HEX.confirmed },
-  confirmed: { label: 'Confirmed', color: 'success', hex: STATUS_HEX.confirmed },
-  declined: { label: 'Declined', color: 'danger', hex: STATUS_HEX.declined },
-  cancelled: { label: 'Cancelled', color: 'subtle', hex: STATUS_HEX.cancelled }
-};
+// Every assignment that reaches this page is already active (the backend
+// only sends current/future, non-cancelled/declined ones) — so there's
+// nothing left to distinguish with a status badge or a varying border
+// color. One consistent green for every card, same green the old
+// "Scheduled"/"Confirmed" states already shared.
+const ACTIVE_STATUS_COLOR = '#1E7C4D';
 
 export default function SubSchedule() {
   const { linkToken } = useParams();
@@ -53,7 +48,7 @@ export default function SubSchedule() {
   if (!data) return <p style={{ padding: 24 }}>Loading…</p>;
 
   return (
-    <div style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
+    <div style={{ padding: 16, maxWidth: 640, margin: '0 auto' }}>
       <h2 style={{ marginBottom: 4 }}>{data.subcontractor.company_name}</h2>
       <p style={{ marginTop: 0, color: 'var(--colorNeutralForeground3)' }}>Your upcoming schedule</p>
 
@@ -84,12 +79,6 @@ export default function SubSchedule() {
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {dateGroups[dateKey].map((a) => {
-                  const display = STATUS_DISPLAY[a.status] || {
-                    label: a.status,
-                    color: 'informative',
-                    hex: '#6B7280'
-                  };
-
                   // Same yardage @ time + materials formatting as the
                   // internal Jobs tab row, and the same materials-ordered
                   // status wording — this page should read as identical to
@@ -122,7 +111,7 @@ export default function SubSchedule() {
                       key={a.id}
                       className="status-card"
                       style={{
-                        '--status-color': display.hex,
+                        '--status-color': ACTIVE_STATUS_COLOR,
                         padding: 14,
                         position: 'relative',
                         cursor: hasNotes ? 'pointer' : 'default'
@@ -141,28 +130,25 @@ export default function SubSchedule() {
                           }}
                         />
                       )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ paddingRight: hasNotes ? 20 : 0 }}>
-                          <strong>
-                            {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
-                            <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                a.job_address
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              style={{ color: 'inherit', textDecoration: 'underline' }}
-                            >
-                              {a.job_address}
-                            </a>
-                            {parenText}
-                          </strong>
-                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 4 }}>
-                            {a.job_materials ? orderStatusText : ''}
-                          </div>
+                      <div style={{ paddingRight: hasNotes ? 20 : 0 }}>
+                        <strong>
+                          {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                              a.job_address
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: 'inherit', textDecoration: 'underline' }}
+                          >
+                            {a.job_address}
+                          </a>
+                          {parenText}
+                        </strong>
+                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 4 }}>
+                          {a.job_materials ? orderStatusText : ''}
                         </div>
-                        <Badge color={display.color}>{display.label}</Badge>
                       </div>
                       {isExpanded && (
                         <div

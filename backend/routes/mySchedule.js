@@ -17,6 +17,10 @@ router.get('/', (req, res) => {
     req.subcontractor.id
   );
 
+  // Only active, current-and-future assignments — same "today and future"
+  // rule the internal Jobs tab uses. Cancelled/declined are excluded here
+  // too: without a status badge anymore, there'd be nothing to distinguish
+  // a cancelled job from a real one, so those just don't show at all.
   const rows = db
     .prepare(
       `SELECT a.*, j.name AS job_name, j.address AS job_address, j.time AS job_time, j.job_type AS job_type,
@@ -25,6 +29,8 @@ router.get('/', (req, res) => {
        FROM assignments a
        JOIN jobs j ON j.id = a.job_id
        WHERE a.subcontractor_id = ?
+         AND a.status NOT IN ('cancelled', 'declined')
+         AND a.end_date >= date('now')
        ORDER BY a.start_date`
     )
     .all(req.subcontractor.id);
