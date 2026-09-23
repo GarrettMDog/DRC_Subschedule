@@ -15,7 +15,7 @@ import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { materialsOrderedColor, formatJobType, materialsOrderStatus } from '../theme';
-import { formatDateRange, formatDateTime } from '../dateUtils';
+import { formatDateRange, formatDateTime, toYMD, formatDateHeader } from '../dateUtils';
 
 const EMPTY_FORM = { company_name: '', trade: '', contact_name: '', email: '', phone: '' };
 
@@ -86,6 +86,33 @@ export default function SubcontractorDirectory() {
   const isCreating = drawerContent === 'create';
   const viewingSub = drawerContent && drawerContent !== 'create' ? drawerContent : null;
   const subJobs = viewingSub ? assignments.filter((a) => a.subcontractor_id === viewingSub.id) : [];
+
+  // Split into "next 4 weeks" (date-grouped, pre-seeded so open days show
+  // even with nothing booked) and everything else (past jobs, or anything
+  // scheduled further out than that) — kept exactly as it worked before,
+  // just moved into its own section rather than dropped.
+  const todayYMD = toYMD(new Date());
+  const windowEnd = new Date();
+  windowEnd.setDate(windowEnd.getDate() + 27);
+  const windowEndYMD = toYMD(windowEnd);
+
+  const upcomingDateGroups = {};
+  for (let i = 0; i < 28; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    upcomingDateGroups[toYMD(d)] = [];
+  }
+
+  const otherJobs = [];
+  for (const a of subJobs) {
+    if (a.start_date >= todayYMD && a.start_date <= windowEndYMD) {
+      if (!upcomingDateGroups[a.start_date]) upcomingDateGroups[a.start_date] = [];
+      upcomingDateGroups[a.start_date].push(a);
+    } else {
+      otherJobs.push(a);
+    }
+  }
+  const upcomingDateKeys = Object.keys(upcomingDateGroups).sort();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -241,11 +268,60 @@ export default function SubcontractorDirectory() {
               </div>
 
               <div>
-                <h3 style={{ marginBottom: 12 }}>
-                  Jobs ({subJobs.length})
-                </h3>
+                <h3 style={{ marginBottom: 12 }}>Next 4 weeks</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {upcomingDateKeys.map((dateKey) => (
+                    <div key={dateKey}>
+                      <h4
+                        style={{
+                          margin: '0 0 8px',
+                          paddingBottom: 6,
+                          borderBottom: '1px solid var(--colorNeutralStroke2)'
+                        }}
+                      >
+                        {formatDateHeader(dateKey)}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {upcomingDateGroups[dateKey].length === 0 ? (
+                          <p style={{ margin: 0, fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                            No jobs scheduled yet.
+                          </p>
+                        ) : (
+                          upcomingDateGroups[dateKey].map((a) => (
+                            <div
+                              key={a.id}
+                              className="status-card"
+                              style={{
+                                '--status-color': materialsOrderedColor(materialsOrderStatus(a)),
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 12,
+                                flexWrap: 'wrap'
+                              }}
+                            >
+                              <div>
+                                <strong>
+                                  {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
+                                  {a.job_address}
+                                </strong>
+                              </div>
+                              {a.status !== 'pending' && (
+                                <Badge color={STATUS_COLOR[a.status] || 'informative'}>{a.status}</Badge>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h3 style={{ marginBottom: 12 }}>Other jobs ({otherJobs.length})</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {subJobs.map((a) => (
+                  {otherJobs.map((a) => (
                     <div
                       key={a.id}
                       className="status-card"
@@ -272,7 +348,7 @@ export default function SubcontractorDirectory() {
                       )}
                     </div>
                   ))}
-                  {subJobs.length === 0 && <p>No jobs assigned to this subcontractor yet.</p>}
+                  {otherJobs.length === 0 && <p>No other jobs for this subcontractor.</p>}
                 </div>
               </div>
             </div>

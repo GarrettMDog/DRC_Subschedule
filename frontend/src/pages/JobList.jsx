@@ -500,6 +500,21 @@ export default function JobList() {
           // e.g. under both Wednesday/Sub A and Monday/Sub B, since those
           // are genuinely different working days for this job.
           const dateGroups = {};
+
+          // Pre-seed the next 28 days (today through today+27) so the
+          // office can see open/unbooked days at a glance, not just days
+          // that already have something on them. Skipped while actively
+          // searching — someone typing an address is looking for a
+          // specific match, not browsing a calendar, so a focused "no
+          // matches" message serves them better than 28 empty blocks.
+          if (!searchText.trim()) {
+            for (let i = 0; i < 28; i++) {
+              const d = new Date();
+              d.setDate(d.getDate() + i);
+              dateGroups[toYMD(d)] = {};
+            }
+          }
+
           for (const { job, activeAssignments } of filtered) {
             for (const a of activeAssignments) {
               if (a.end_date < todayYMD) continue;
@@ -527,7 +542,8 @@ export default function JobList() {
             }
           }
 
-          if (unassigned.length === 0 && dateKeys.length === 0) {
+          const allDatesEmpty = dateKeys.every((d) => Object.keys(dateGroups[d]).length === 0);
+          if (unassigned.length === 0 && allDatesEmpty) {
             if (jobs.length === 0) return <p>No jobs yet. Click "Add job" to create one.</p>;
             return <p>No jobs match your search/filter.</p>;
           }
@@ -554,23 +570,29 @@ export default function JobList() {
                     {formatDateHeader(dateKey)}
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
-                      <div key={subName}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: 'var(--colorNeutralForeground2)',
-                            marginBottom: 6
-                          }}
-                        >
-                          {subName}
+                    {Object.keys(dateGroups[dateKey]).length === 0 ? (
+                      <p style={{ margin: 0, fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                        No jobs scheduled yet.
+                      </p>
+                    ) : (
+                      Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
+                        <div key={subName}>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: 'var(--colorNeutralForeground2)',
+                              marginBottom: 6
+                            }}
+                          >
+                            {subName}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {jobsForSub.map((j) => renderJobRow(j))}
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {jobsForSub.map((j) => renderJobRow(j))}
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </div>
               ))}
