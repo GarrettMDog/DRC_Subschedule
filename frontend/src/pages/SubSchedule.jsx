@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge, MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
-import { STATUS_HEX, formatJobType } from '../theme';
-import { formatDateRange, formatTime, formatDateHeader } from '../dateUtils';
+import { STATUS_HEX, formatJobType, formatMaterials, materialsOrderStatus } from '../theme';
+import { formatTime, formatDateHeader } from '../dateUtils';
+import LeafIcon from '../components/LeafIcon';
 
 // Read-only for subs now — no confirm/decline action, so "pending" no longer
 // means "awaiting a response." Relabeled to avoid implying something's
@@ -21,6 +22,10 @@ export default function SubSchedule() {
   const { linkToken } = useParams();
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  // Which assignment's notes are currently expanded, if any — read-only
+  // reveal, not an edit surface. Only ever set for assignments whose job
+  // actually has notes; a card with nothing to show just isn't clickable.
+  const [expandedId, setExpandedId] = useState(null);
 
   async function load() {
     try {
@@ -84,21 +89,94 @@ export default function SubSchedule() {
                     color: 'informative',
                     hex: '#6B7280'
                   };
+
+                  // Same yardage @ time + materials formatting as the
+                  // internal Jobs tab row, and the same materials-ordered
+                  // status wording — this page should read as identical to
+                  // that view, just without any way to edit anything.
+                  const orderStatus = materialsOrderStatus({
+                    materials: a.job_materials,
+                    ordered_materials: a.job_ordered_materials
+                  });
+                  const orderStatusText = {
+                    none: 'Materials pending',
+                    partial: 'Some materials ordered',
+                    full: 'Materials ordered'
+                  }[orderStatus];
+
+                  const yardageTimeParts = [];
+                  if (a.job_yardage) yardageTimeParts.push(`${a.job_yardage} yards`);
+                  if (a.job_time) yardageTimeParts.push(formatTime(a.job_time));
+                  const yardageTimeText = yardageTimeParts.join(' @ ');
+
+                  const parenParts = [];
+                  if (yardageTimeText) parenParts.push(yardageTimeText);
+                  if (a.job_materials) parenParts.push(formatMaterials(a.job_materials));
+                  const parenText = parenParts.length > 0 ? ` (${parenParts.join(', ')})` : '';
+
+                  const hasNotes = !!a.job_notes;
+                  const isExpanded = expandedId === a.id;
+
                   return (
-                    <div key={a.id} className="status-card" style={{ '--status-color': display.hex, padding: 14 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
+                    <div
+                      key={a.id}
+                      className="status-card"
+                      style={{
+                        '--status-color': display.hex,
+                        padding: 14,
+                        position: 'relative',
+                        cursor: hasNotes ? 'pointer' : 'default'
+                      }}
+                      onClick={hasNotes ? () => setExpandedId(isExpanded ? null : a.id) : undefined}
+                    >
+                      {hasNotes && (
+                        <LeafIcon
+                          size={13}
+                          title="Has notes — tap to view"
+                          style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 14,
+                            color: 'var(--colorNeutralForeground3)'
+                          }}
+                        />
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ paddingRight: hasNotes ? 20 : 0 }}>
                           <strong>
                             {a.job_type ? `${formatJobType(a.job_type)} — ` : ''}
-                            {a.job_address}
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                a.job_address
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ color: 'inherit', textDecoration: 'underline' }}
+                            >
+                              {a.job_address}
+                            </a>
+                            {parenText}
                           </strong>
-                          <div style={{ fontSize: 13, marginTop: 4 }}>
-                            {formatDateRange(a.start_date, a.end_date)}
-                            {a.job_time && ` · ${formatTime(a.job_time)}`}
+                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 4 }}>
+                            {a.job_materials ? orderStatusText : ''}
                           </div>
                         </div>
                         <Badge color={display.color}>{display.label}</Badge>
                       </div>
+                      {isExpanded && (
+                        <div
+                          style={{
+                            marginTop: 10,
+                            paddingTop: 10,
+                            borderTop: '1px solid var(--colorNeutralStroke2)',
+                            fontSize: 13,
+                            whiteSpace: 'pre-wrap'
+                          }}
+                        >
+                          {a.job_notes}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

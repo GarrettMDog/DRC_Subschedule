@@ -68,6 +68,7 @@ body {
 /* Status-colored left border gives cards visual structure at a glance,
    without needing to read the badge text first. */
 .status-card {
+  position: relative;
   border: 1px solid var(--colorNeutralStroke2);
   border-left: 4px solid var(--status-color, var(--colorNeutralStroke1));
   border-radius: 8px;
