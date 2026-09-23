@@ -44,7 +44,7 @@ const EMPTY_FORM = {
 };
 const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
 const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour', 'Replace', 'Form Wall', 'Dig Ftg', 'Service'];
-const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Gravel', 'Dumptruck', 'Supplies', 'Dump Trailer', 'Georgia Buggy'];
+const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Line Pump', 'Gravel', 'Dumptruck', 'Supplies', 'Dump Trailer', 'Georgia Buggy'];
 
 const ASSIGNMENT_STATUS_COLOR = {
   pending: 'warning',
