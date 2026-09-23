@@ -122,8 +122,7 @@ export default function SubcontractorDirectory() {
         </MessageBar>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <h3 style={{ margin: 0 }}>Subcontractors</h3>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <Button appearance="primary" onClick={() => setDrawerContent('create')}>
           + Add subcontractor
         </Button>

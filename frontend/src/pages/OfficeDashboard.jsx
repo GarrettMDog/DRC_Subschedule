@@ -43,14 +43,13 @@ export default function OfficeDashboard() {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           marginBottom: 12,
           flexWrap: 'wrap',
           gap: 8
         }}
       >
-        <h3 style={{ margin: 0 }}>Calendar</h3>
         <div style={{ display: 'flex', gap: 4 }}>
           <Button
             size="small"

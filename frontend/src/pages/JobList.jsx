@@ -465,7 +465,7 @@ export default function JobList() {
         ref={toolbarRef}
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 8,
@@ -476,16 +476,15 @@ export default function JobList() {
           padding: '8px 0'
         }}
       >
-        <h3 style={{ margin: 0 }}>Jobs</h3>
         <div style={{ display: 'flex', gap: 6 }}>
           <Button
-            appearance={activePanel === 'search' || searchText ? 'primary' : 'secondary'}
+            appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
             icon={<Search20Regular />}
             aria-label="Search"
             onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
           />
           <Button
-            appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'secondary'}
+            appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'subtle'}
             icon={<Filter20Regular />}
             aria-label="Filter"
             onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
