@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { MessageBar, MessageBarBody } from '@fluentui/react-components';
 import { subApi } from '../api/client';
 import { formatJobType, formatMaterials, materialsOrderStatus } from '../theme';
-import { formatTime, formatDateHeader } from '../dateUtils';
+import { formatTime, formatDateHeader, toYMD } from '../dateUtils';
 import LeafIcon from '../components/LeafIcon';
 
 // Every assignment that reaches this page is already active (the backend
@@ -57,14 +57,24 @@ export default function SubSchedule() {
           // Grouped by date only — this page always shows exactly one
           // subcontractor's own assignments, so a subcontractor sub-group
           // would just repeat their own name under every date for no reason.
+          // Pre-seeded with the next 28 days so open days show too, not
+          // just days that already have something booked — same treatment
+          // as the internal Jobs tab and the office-facing sub profile view.
           const dateGroups = {};
+          for (let i = 0; i < 28; i++) {
+            const d = new Date();
+            d.setDate(d.getDate() + i);
+            dateGroups[toYMD(d)] = [];
+          }
           for (const a of data.assignments) {
             if (!dateGroups[a.start_date]) dateGroups[a.start_date] = [];
             dateGroups[a.start_date].push(a);
           }
-          const dateKeys = Object.keys(dateGroups);
+          const dateKeys = Object.keys(dateGroups).sort();
 
-          if (dateKeys.length === 0) return <p>No assignments yet.</p>;
+          if (data.assignments.length === 0 && dateKeys.every((d) => dateGroups[d].length === 0)) {
+            return <p>No assignments yet.</p>;
+          }
 
           return dateKeys.map((dateKey) => (
             <div key={dateKey}>
@@ -78,7 +88,12 @@ export default function SubSchedule() {
                 {formatDateHeader(dateKey)}
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {dateGroups[dateKey].map((a) => {
+                {dateGroups[dateKey].length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
+                    Nothing scheduled yet.
+                  </p>
+                ) : (
+                  dateGroups[dateKey].map((a) => {
                   // Same yardage @ time + materials formatting as the
                   // internal Jobs tab row, and the same materials-ordered
                   // status wording — this page should read as identical to
@@ -165,7 +180,8 @@ export default function SubSchedule() {
                       )}
                     </div>
                   );
-                })}
+                  })
+                )}
               </div>
             </div>
           ));
