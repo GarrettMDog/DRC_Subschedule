@@ -378,6 +378,13 @@ export default function JobList() {
         style={{ '--status-color': materialsOrderedColor(orderStatus) }}
         onClick={() => openJobDetail(j)}
       >
+        {j.notes && (
+          <LeafIcon
+            size={13}
+            title="Has notes"
+            style={{ position: 'absolute', top: 10, right: 14, color: 'var(--colorNeutralForeground3)' }}
+          />
+        )}
         <div>
           <strong>
             {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
@@ -392,21 +399,10 @@ export default function JobList() {
             </a>
             {parenText}
           </strong>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              fontSize: 12,
-              color: 'var(--colorNeutralForeground3)'
-            }}
-          >
-            <span>
-              {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-            {j.notes && <LeafIcon size={13} title="Has notes" />}
+          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
+            {[j.time ? formatTime(j.time) : null, j.materials ? orderStatusText : null]
+              .filter(Boolean)
+              .join(' · ')}
           </div>
         </div>
         <ChevronRight20Regular />
