@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Field,
@@ -16,7 +16,13 @@ import {
   DrawerHeader,
   DrawerHeaderTitle
 } from '@fluentui/react-components';
-import { ChevronRight20Regular, Dismiss24Regular } from '@fluentui/react-icons';
+import {
+  ChevronRight20Regular,
+  Dismiss24Regular,
+  Search20Regular,
+  Filter20Regular,
+  Add20Regular
+} from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { useConfirmDialog } from '../components/useConfirmDialog';
@@ -59,6 +65,7 @@ const ASSIGNMENT_STATUS_COLOR = {
 export default function JobList() {
   const { getToken } = useApiToken();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
+  const toolbarRef = useRef(null);
   const [jobs, setJobs] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [todos, setTodos] = useState([]);
@@ -96,6 +103,13 @@ export default function JobList() {
   // before the date/subcontractor grouping below.
   const [searchText, setSearchText] = useState('');
 
+  // Which of the two compact panels (search input, subcontractor filter) is
+  // currently revealed, if any — collapsing one to save space doesn't clear
+  // its underlying value, so a search or filter stays applied even while
+  // hidden; the button itself gets a filled/primary look as the visual cue
+  // that something's still active behind it.
+  const [activePanel, setActivePanel] = useState(null);
+
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
   // that view no longer exists (Dashboard is calendar-only now).
@@ -126,6 +140,24 @@ export default function JobList() {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The toolbar row (title + search/filter/add buttons) is sticky too now,
+  // stacking right below the app's own sticky header. Its height isn't
+  // fixed either — the buttons can wrap on a narrow screen — so this
+  // measures the real rendered height the same way OfficeLayout does for
+  // its own header, rather than guessing a pixel offset that could be
+  // wrong on some screen size.
+  useEffect(() => {
+    const el = toolbarRef.current;
+    if (!el) return;
+    const updateHeight = () => {
+      document.documentElement.style.setProperty('--jobs-toolbar-height', `${el.offsetHeight}px`);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   async function handleAdd(e) {
@@ -429,42 +461,81 @@ export default function JobList() {
         </MessageBar>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+      <div
+        ref={toolbarRef}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 8,
+          position: 'sticky',
+          top: 'var(--header-height, 0px)',
+          zIndex: 6,
+          background: 'var(--colorNeutralBackground1)',
+          padding: '8px 0'
+        }}
+      >
         <h3 style={{ margin: 0 }}>Jobs</h3>
-        <Button appearance="primary" onClick={() => setDrawerContent('create')}>
-          + Add job
-        </Button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button
+            appearance={activePanel === 'search' || searchText ? 'primary' : 'secondary'}
+            icon={<Search20Regular />}
+            aria-label="Search"
+            onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
+          />
+          <Button
+            appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'secondary'}
+            icon={<Filter20Regular />}
+            aria-label="Filter"
+            onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
+          />
+          <Button
+            appearance="primary"
+            icon={<Add20Regular />}
+            aria-label="Add job"
+            onClick={() => setDrawerContent('create')}
+          />
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-        <Field label="Search" style={{ minWidth: 200, flex: 1 }}>
-          <Input
-            placeholder="Job address…"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </Field>
-        <Field label="Subcontractor" style={{ minWidth: 200 }}>
-          <Combobox
-            placeholder="Filter by subcontractor…"
-            value={subFilterText}
-            onInput={(e) => setSubFilterText(e.target.value)}
-            onOptionSelect={(_, data) => {
-              setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
-              setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
-            }}
-          >
-            <Option value="all">All subcontractors</Option>
-            {subcontractors
-              .filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()))
-              .map((s) => (
-                <Option key={s.id} value={String(s.id)} text={s.company_name}>
-                  {s.company_name}
-                </Option>
-              ))}
-          </Combobox>
-        </Field>
-      </div>
+      {activePanel === 'search' && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="Search" style={{ minWidth: 200, flex: 1 }}>
+            <Input
+              placeholder="Job address…"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              autoFocus
+            />
+          </Field>
+        </div>
+      )}
+
+      {activePanel === 'filter' && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="Subcontractor" style={{ minWidth: 200 }}>
+            <Combobox
+              placeholder="Filter by subcontractor…"
+              value={subFilterText}
+              onInput={(e) => setSubFilterText(e.target.value)}
+              onOptionSelect={(_, data) => {
+                setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
+                setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
+              }}
+            >
+              <Option value="all">All subcontractors</Option>
+              {subcontractors
+                .filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()))
+                .map((s) => (
+                  <Option key={s.id} value={String(s.id)} text={s.company_name}>
+                    {s.company_name}
+                  </Option>
+                ))}
+            </Combobox>
+          </Field>
+        </div>
+      )}
 
       <div>
         {(() => {
@@ -566,7 +637,7 @@ export default function JobList() {
                       padding: '10px 0',
                       borderBottom: '1px solid var(--colorNeutralStroke2)',
                       position: 'sticky',
-                      top: 'var(--header-height, 0px)',
+                      top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
                       zIndex: 5,
                       background: 'var(--colorNeutralBackground1)'
                     }}
