@@ -118,13 +118,11 @@ export default function JobList() {
   // that something's still active behind it.
   const [activePanel, setActivePanel] = useState(null);
 
-  // How many weeks (starting with the current one) are currently shown —
-  // the Jobs tab defaults to just the current week, with a button to
-  // reveal more one week at a time, up to the existing 4-week/28-day
-  // planning horizon used elsewhere in this app (e.g. the subcontractor
-  // profile's "Next 4 weeks" section).
-  const [visibleWeeks, setVisibleWeeks] = useState(1);
-  const MAX_VISIBLE_WEEKS = 4;
+  // Which week is currently being viewed — 0 is the current week, positive
+  // numbers step forward, paginated rather than accumulated: navigating
+  // shows only that week, replacing what was there rather than adding to
+  // it, so "next week" then "back" returns to exactly this week's view.
+  const [weekOffset, setWeekOffset] = useState(0);
 
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
@@ -704,6 +702,40 @@ export default function JobList() {
             return <p>No jobs match your search/filter.</p>;
           }
 
+          // The date range for whichever week is currently being viewed.
+          // Week 0's Monday rolls forward to next week if today falls on
+          // a weekend, matching the same logic used to decide whether
+          // today's own week extends through an active Saturday — a job
+          // scheduled only on Sunday (nothing on Saturday) still needs to
+          // extend the week to include it, so both days are checked
+          // independently rather than assuming Saturday-active implies
+          // Sunday-active or vice versa.
+          const todayForWeek = new Date();
+          const todayDayOfWeek = todayForWeek.getDay();
+          const daysUntilFriday = ((5 - todayDayOfWeek) % 7 + 7) % 7;
+          const week0Friday = new Date(todayForWeek);
+          week0Friday.setDate(week0Friday.getDate() + daysUntilFriday);
+          const week0Monday = new Date(week0Friday);
+          week0Monday.setDate(week0Monday.getDate() - 4);
+
+          const weekNMonday = new Date(week0Monday);
+          weekNMonday.setDate(weekNMonday.getDate() + weekOffset * 7);
+          const weekNFriday = new Date(weekNMonday);
+          weekNFriday.setDate(weekNFriday.getDate() + 4);
+          const weekNSaturday = new Date(weekNFriday);
+          weekNSaturday.setDate(weekNSaturday.getDate() + 1);
+          const weekNSunday = new Date(weekNSaturday);
+          weekNSunday.setDate(weekNSunday.getDate() + 1);
+
+          let weekEnd = weekNFriday;
+          if (dateGroups[toYMD(weekNSunday)]?.length > 0) {
+            weekEnd = weekNSunday;
+          } else if (dateGroups[toYMD(weekNSaturday)]?.length > 0) {
+            weekEnd = weekNSaturday;
+          }
+          const weekStartYMD = toYMD(weekNMonday);
+          const weekEndYMD = toYMD(weekEnd);
+
           // Hide an empty Saturday/Sunday entirely rather than even showing
           // the compact "no jobs" row — a weekend only earns a spot in the
           // list once something's actually scheduled on it.
@@ -713,31 +745,9 @@ export default function JobList() {
             return !isWeekend || dateGroups[dateKey].length > 0;
           });
 
-          // The cutoff date for however many weeks are currently revealed.
-          // Each week runs through Friday, rolling forward to the next
-          // Friday if today happens to fall on a weekend, and stretching
-          // to include Saturday if that Saturday specifically has an
-          // active job on it. Computed iteratively rather than as a fixed
-          // "+7 days" offset, since each successive week needs to check
-          // its own Saturday independently.
-          let weekCutoff = new Date();
-          for (let w = 0; w < visibleWeeks; w++) {
-            const dayOfWeek = weekCutoff.getDay();
-            const daysUntilFriday = ((5 - dayOfWeek) % 7 + 7) % 7;
-            weekCutoff.setDate(weekCutoff.getDate() + daysUntilFriday);
-            const saturday = new Date(weekCutoff);
-            saturday.setDate(saturday.getDate() + 1);
-            const saturdayYMD = toYMD(saturday);
-            if (dateGroups[saturdayYMD] && dateGroups[saturdayYMD].length > 0) {
-              weekCutoff = saturday;
-            }
-            if (w < visibleWeeks - 1) {
-              weekCutoff.setDate(weekCutoff.getDate() + 1);
-            }
-          }
-          const weekCutoffYMD = toYMD(weekCutoff);
-          const withinRevealedWeeks = visibleDateKeys.filter((dateKey) => dateKey <= weekCutoffYMD);
-          const hasMoreWeeks = visibleWeeks < MAX_VISIBLE_WEEKS && visibleDateKeys.some((d) => d > weekCutoffYMD);
+          const withinRevealedWeeks = visibleDateKeys.filter(
+            (dateKey) => dateKey >= weekStartYMD && dateKey <= weekEndYMD
+          );
 
           return (
             <>
@@ -749,6 +759,33 @@ export default function JobList() {
                   </div>
                 </div>
               )}
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 12
+                }}
+              >
+                <Button
+                  appearance="subtle"
+                  disabled={weekOffset <= 0}
+                  onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+                >
+                  ← Previous week
+                </Button>
+                <strong>
+                  {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
+                </strong>
+                <Button
+                  appearance="subtle"
+                  disabled={weekOffset >= 3}
+                  onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
+                >
+                  Next week →
+                </Button>
+              </div>
               {withinRevealedWeeks.map((dateKey, index) => {
                 const hasJobs = dateGroups[dateKey].length > 0;
                 // A divider between each week — right before a Monday, as
@@ -816,13 +853,6 @@ export default function JobList() {
                   </div>
                 );
               })}
-              {hasMoreWeeks && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-                  <Button appearance="secondary" onClick={() => setVisibleWeeks((w) => w + 1)}>
-                    Show next week
-                  </Button>
-                </div>
-              )}
             </>
           );
         })()}
