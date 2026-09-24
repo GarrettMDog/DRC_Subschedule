@@ -570,24 +570,41 @@ export default function JobList() {
       {activePanel === 'filter' && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Subcontractor" style={{ minWidth: 200 }}>
-            <Combobox
-              placeholder="Filter by subcontractor…"
-              value={subFilterText}
-              onInput={(e) => setSubFilterText(e.target.value)}
-              onOptionSelect={(_, data) => {
-                setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
-                setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
-              }}
-            >
-              <Option value="all">All subcontractors</Option>
-              {subcontractors
-                .filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()))
-                .map((s) => (
-                  <Option key={s.id} value={String(s.id)} text={s.company_name}>
-                    {s.company_name}
-                  </Option>
-                ))}
-            </Combobox>
+            {(() => {
+              // If the text still exactly matches whatever's currently
+              // selected, the person hasn't typed anything new since
+              // picking it — clicking in to switch subs shouldn't just
+              // show that same one (which is what a plain substring match
+              // against its own name would do, hiding everyone else).
+              // Show every other sub instead, so switching is one click.
+              // The moment they actually type something different, fall
+              // back to the normal search-as-you-type behavior.
+              const currentSub = subcontractors.find((s) => s.id === subFilterId);
+              const untouchedSinceSelection = currentSub && subFilterText === currentSub.company_name;
+
+              const filterOptions = untouchedSinceSelection
+                ? subcontractors.filter((s) => s.id !== subFilterId)
+                : subcontractors.filter((s) => s.company_name.toLowerCase().includes(subFilterText.toLowerCase()));
+
+              return (
+                <Combobox
+                  placeholder="Filter by subcontractor…"
+                  value={subFilterText}
+                  onInput={(e) => setSubFilterText(e.target.value)}
+                  onOptionSelect={(_, data) => {
+                    setSubFilterId(data.optionValue === 'all' ? null : Number(data.optionValue));
+                    setSubFilterText(data.optionValue === 'all' ? '' : data.optionText);
+                  }}
+                >
+                  <Option value="all">All subcontractors</Option>
+                  {filterOptions.map((s) => (
+                    <Option key={s.id} value={String(s.id)} text={s.company_name}>
+                      {s.company_name}
+                    </Option>
+                  ))}
+                </Combobox>
+              );
+            })()}
           </Field>
         </div>
       )}
