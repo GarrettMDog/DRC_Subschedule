@@ -9,30 +9,6 @@ body {
   }
 }
 
-/* Tagline badge under the app title. Deliberately NOT using
-   colorBrandBackground2/colorBrandForeground1 here — those tokens are
-   specifically designed to invert into a bright highlight in dark mode
-   (correct for an active nav selection, wrong for a passive tagline, which
-   should read as a quiet accent in either theme). Light and dark get their
-   own tuned colors instead, since a single fixed color compromises contrast
-   in one theme or the other. */
-/* Tagline under the app title. Plain colored text, deliberately no
-   background box — a tinted background here kept reading as a
-   highlighted/selected element no matter how muted the color, so this
-   stays as just text with no fill at all. */
-.header-tagline {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 10px;
-  color: #a16812;
-}
-
-@media (prefers-color-scheme: dark) {
-  .header-tagline {
-    color: #c9ad82;
-  }
-}
-
 /* Mobile-first: single column by default. Wider screens get a real two-pane
    layout (form/actions on the left, content on the right) instead of a
    narrow strip of controls floating in a sea of empty space. */

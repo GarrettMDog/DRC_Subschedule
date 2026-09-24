@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const NAV_ITEMS = [
@@ -8,49 +8,16 @@ const NAV_ITEMS = [
   { value: '/services', label: 'Services' }
 ];
 
-// Scrolled past this many pixels before the title/tagline collapse away —
-// a small buffer, not zero, so trackpad/momentum bounce right at the very
-// top doesn't flicker the header in and out.
-const COLLAPSE_THRESHOLD = 20;
-
 export default function OfficeLayout({ children }) {
   const location = useLocation();
   const headerRef = useRef(null);
-
-  // Title and tagline collapse away once scrolled down at all, reclaiming
-  // space for whatever page is being browsed — the nav row itself always
-  // stays visible regardless, so switching tabs is never blocked. Only
-  // scrolling all the way back to the top brings the full header back,
-  // rather than reappearing on every small upward scroll — the point is
-  // to stay out of the way while actively browsing a long list, not pop
-  // open and closed repeatedly.
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
-  useEffect(() => {
-    let ticking = false;
-    function updateCollapsed() {
-      setIsCollapsed(window.scrollY > COLLAPSE_THRESHOLD);
-      ticking = false;
-    }
-    function onScroll() {
-      if (!ticking) {
-        requestAnimationFrame(updateCollapsed);
-        ticking = true;
-      }
-    }
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
 
   // The header's height isn't fixed — the nav row wraps to a second line
   // on narrow/mobile screens (see the comment below), so anything else
   // that needs to stick just below it (like the Jobs tab's per-date sticky
   // headers) can't safely assume a hardcoded pixel offset. Measuring the
   // real rendered height and exposing it as a CSS variable means it stays
-  // correct regardless of screen width, font size, nav wrapping, or now
-  // the collapsed/expanded state too — nothing downstream needs to know
-  // this collapsing exists at all, since they only ever read the
-  // measured result.
+  // correct regardless of screen width, font size, or nav wrapping.
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
@@ -76,17 +43,6 @@ export default function OfficeLayout({ children }) {
           zIndex: 10
         }}
       >
-        <div
-          style={{
-            maxHeight: isCollapsed ? 0 : 80,
-            opacity: isCollapsed ? 0 : 1,
-            overflow: 'hidden',
-            transition: 'max-height 0.2s ease, opacity 0.15s ease'
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>CreOps</div>
-          <div className="header-tagline">Curing your workload</div>
-        </div>
         {/* Plain flex-wrap nav, not Fluent's TabList — TabList is documented to never
             wrap or scroll on narrow containers (Fluent's own usage guidance), so on a
             phone-width screen with 3 labels including "Subcontractors" it would just
