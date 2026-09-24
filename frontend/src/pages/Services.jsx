@@ -14,7 +14,7 @@ import {
   DrawerHeader,
   DrawerHeaderTitle
 } from '@fluentui/react-components';
-import { Dismiss24Regular, Delete20Regular } from '@fluentui/react-icons';
+import { Dismiss24Regular, Delete20Regular, Filter20Regular, Add20Regular, PersonAdd20Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDate } from '../dateUtils';
@@ -33,6 +33,10 @@ export default function Services() {
   const [error, setError] = useState(null);
   const [hideCompleted, setHideCompleted] = useState(true);
   const [assigneeFilter, setAssigneeFilter] = useState('all'); // 'all' | 'unassigned' | assignee id
+  // Compact toolbar, same pattern as the Jobs tab — the Filter icon reveals
+  // the assignee dropdown + hide-completed toggle below, rather than
+  // showing them inline all the time.
+  const [activePanel, setActivePanel] = useState(null); // null | 'filter'
 
   // To-do drawer: 'create' shows the add form, a todo object edits that
   // todo, null closes it.
@@ -197,7 +201,33 @@ export default function Services() {
             gap: 8
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button
+              appearance={activePanel === 'filter' || assigneeFilter !== 'all' || !hideCompleted ? 'primary' : 'subtle'}
+              icon={<Filter20Regular />}
+              aria-label="Filter"
+              onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
+            />
+            <Button
+              appearance="subtle"
+              icon={<PersonAdd20Regular />}
+              aria-label="Add assignee"
+              onClick={openAssigneeCreate}
+            />
+            <Button appearance="primary" icon={<Add20Regular />} aria-label="Add to-do" onClick={openTodoCreate} />
+          </div>
+        </div>
+
+        {activePanel === 'filter' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              marginBottom: 12
+            }}
+          >
             <Field label="Assigned to" style={{ minWidth: 160 }}>
               <Dropdown
                 value={
@@ -224,14 +254,8 @@ export default function Services() {
               checked={hideCompleted}
               onChange={(_, data) => setHideCompleted(data.checked)}
             />
-            <Button appearance="secondary" onClick={openAssigneeCreate}>
-              + Add assignee
-            </Button>
-            <Button appearance="primary" onClick={openTodoCreate}>
-              + Add to-do
-            </Button>
           </div>
-        </div>
+        )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {visibleTodos.map((t) => (
