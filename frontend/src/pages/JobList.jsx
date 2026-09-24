@@ -66,6 +66,14 @@ export default function JobList() {
   const { getToken } = useApiToken();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const toolbarRef = useRef(null);
+
+  // Which date header is currently stuck/pinned at the top while scrolling,
+  // so it can be shown a bit larger — the one you're actually looking at
+  // right now, versus ones you've scrolled past or haven't reached yet.
+  // CSS alone has no way to know when a sticky element is "currently
+  // stuck," so this is tracked via scroll position instead.
+  const [activeStickyDate, setActiveStickyDate] = useState(null);
+  const dateHeaderRefs = useRef({});
   const [jobs, setJobs] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [todos, setTodos] = useState([]);
@@ -163,6 +171,50 @@ export default function JobList() {
     observer.observe(el);
     return () => observer.disconnect();
   }, [loading]);
+
+  // Figures out which date header is currently pinned by checking each
+  // one's actual on-screen position — a stuck sticky element's top edge
+  // sits exactly at its `top` offset, so whichever header currently sits
+  // there (the last one in date order that's reached that position) is
+  // the one being looked at right now. Reads the offset and the current
+  // set of rendered headers fresh on every call, rather than caching
+  // either — so this doesn't need to be recreated as jobs load or the
+  // date range changes; it just reflects whatever's on screen right now.
+  useEffect(() => {
+    let ticking = false;
+
+    function updateActiveDate() {
+      const headerHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 0;
+      const toolbarHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--jobs-toolbar-height')) || 0;
+      const offset = headerHeight + toolbarHeight;
+
+      const entries = Object.entries(dateHeaderRefs.current)
+        .filter(([, el]) => el)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+
+      let active = null;
+      for (const [date, el] of entries) {
+        if (el.getBoundingClientRect().top <= offset + 1) {
+          active = date;
+        } else {
+          break;
+        }
+      }
+      setActiveStickyDate(active);
+      ticking = false;
+    }
+
+    function onScroll() {
+      if (!ticking) {
+        requestAnimationFrame(updateActiveDate);
+        ticking = true;
+      }
+    }
+
+    updateActiveDate();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   async function handleAdd(e) {
     e.preventDefault();
@@ -635,6 +687,9 @@ export default function JobList() {
               {dateKeys.map((dateKey) => (
                 <div key={dateKey} style={{ marginBottom: 20 }}>
                   <h4
+                    ref={(el) => {
+                      dateHeaderRefs.current[dateKey] = el;
+                    }}
                     style={{
                       margin: 0,
                       padding: '10px 0',
@@ -642,7 +697,9 @@ export default function JobList() {
                       position: 'sticky',
                       top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
                       zIndex: 5,
-                      background: 'var(--colorNeutralBackground1)'
+                      background: 'var(--colorNeutralBackground1)',
+                      fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
+                      transition: 'font-size 0.15s ease'
                     }}
                   >
                     {formatDateHeader(dateKey)}
