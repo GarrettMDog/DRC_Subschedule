@@ -446,7 +446,7 @@ export default function JobList() {
   // checked off itself.
   const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
 
-  function renderJobRow(j) {
+  function renderJobRow(j, subName) {
     // "(45 yards @ 10:00 AM, Concrete + Pump)" — yardage and time combined
     // with @ when both are set; falls back to whichever one is actually
     // present (no dangling @ with nothing on one side of it) if only one
@@ -468,7 +468,7 @@ export default function JobList() {
 
     return (
       <div
-        key={j.id}
+        key={subName ? `${j.id}-${subName}` : j.id}
         className="list-row"
         style={{ '--status-color': materialsOrderedColor(orderStatus) }}
         onClick={() => openJobDetail(j)}
@@ -494,6 +494,9 @@ export default function JobList() {
             </a>
             {parenText}
           </strong>
+          {subName && (
+            <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground2)' }}>{subName}</div>
+          )}
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
             {j.materials ? orderStatusText : ''}
           </div>
@@ -638,10 +641,12 @@ export default function JobList() {
           // same rule this used to have on the Dashboard's old list view.
           const todayYMD = toYMD(new Date());
 
-          // Master group: date. Sub-group: subcontractor. A job with
-          // multiple assignments now correctly appears under each one —
-          // e.g. under both Wednesday/Sub A and Monday/Sub B, since those
-          // are genuinely different working days for this job.
+          // Master group: date only now — subcontractor no longer creates
+          // its own sub-grouping, since who's assigned now shows directly
+          // on each job's own tile instead. A job with multiple assignments
+          // still correctly appears once per assignment — e.g. once under
+          // Wednesday for Sub A and once under Monday for Sub B, since
+          // those are genuinely different working days for this job.
           const dateGroups = {};
 
           // Pre-seed the next 28 days (today through today+27) so the
@@ -654,7 +659,7 @@ export default function JobList() {
             for (let i = 0; i < 28; i++) {
               const d = new Date();
               d.setDate(d.getDate() + i);
-              dateGroups[toYMD(d)] = {};
+              dateGroups[toYMD(d)] = [];
             }
           }
 
@@ -663,33 +668,45 @@ export default function JobList() {
               if (a.end_date < todayYMD) continue;
               if (subFilterId !== null && a.subcontractor_id !== subFilterId) continue;
               const date = a.start_date;
-              const subName = a.subcontractor_name;
-              if (!dateGroups[date]) dateGroups[date] = {};
-              if (!dateGroups[date][subName]) dateGroups[date][subName] = [];
-              dateGroups[date][subName].push(job);
+              if (!dateGroups[date]) dateGroups[date] = [];
+              dateGroups[date].push({ job, subName: a.subcontractor_name });
             }
           }
           const dateKeys = Object.keys(dateGroups).sort();
 
-          // Within a subcontractor's day, order by the job's own time —
-          // earliest first. A job with no time set falls to the end, same
-          // convention used everywhere else time-sorting happens in this app.
+          // Within a day, order by subcontractor first — alphabetically —
+          // so jobs for the same sub still land next to each other even
+          // without a visual grouping header anymore. Within a given
+          // subcontractor, a job with no time set comes first (unscheduled
+          // work shows before the day's scheduled jobs), then remaining
+          // jobs go earliest-time-first. Deliberately the opposite of the
+          // no-time-goes-last convention used elsewhere in the app — this
+          // sort specifically was asked to put unscheduled jobs first.
           for (const date of dateKeys) {
-            for (const subName of Object.keys(dateGroups[date])) {
-              dateGroups[date][subName].sort((a, b) => {
-                if (!a.time && !b.time) return 0;
-                if (!a.time) return 1;
-                if (!b.time) return -1;
-                return a.time.localeCompare(b.time);
-              });
-            }
+            dateGroups[date].sort((a, b) => {
+              const subCompare = (a.subName || '').localeCompare(b.subName || '');
+              if (subCompare !== 0) return subCompare;
+              if (!a.job.time && !b.job.time) return 0;
+              if (!a.job.time) return -1;
+              if (!b.job.time) return 1;
+              return a.job.time.localeCompare(b.job.time);
+            });
           }
 
-          const allDatesEmpty = dateKeys.every((d) => Object.keys(dateGroups[d]).length === 0);
+          const allDatesEmpty = dateKeys.every((d) => dateGroups[d].length === 0);
           if (unassigned.length === 0 && allDatesEmpty) {
             if (jobs.length === 0) return <p>No jobs yet. Click "Add job" to create one.</p>;
             return <p>No jobs match your search/filter.</p>;
           }
+
+          // Hide an empty Saturday/Sunday entirely rather than even showing
+          // the compact "no jobs" row — a weekend only earns a spot in the
+          // list once something's actually scheduled on it.
+          const visibleDateKeys = dateKeys.filter((dateKey) => {
+            const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
+            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+            return !isWeekend || dateGroups[dateKey].length > 0;
+          });
 
           return (
             <>
@@ -701,8 +718,13 @@ export default function JobList() {
                   </div>
                 </div>
               )}
-              {dateKeys.map((dateKey) => {
-                const hasJobs = Object.keys(dateGroups[dateKey]).length > 0;
+              {visibleDateKeys.map((dateKey, index) => {
+                const hasJobs = dateGroups[dateKey].length > 0;
+                // A divider between each week — right before a Monday, as
+                // long as it isn't the very first thing in the list (no
+                // point opening the page with a lone divider above day one).
+                const isMonday = new Date(`${dateKey}T00:00:00`).getDay() === 1;
+                const showWeekDivider = isMonday && index > 0;
 
                 if (!hasJobs) {
                   // Compact, single-line, non-sticky row — an empty day has
@@ -713,61 +735,54 @@ export default function JobList() {
                   // a handful of empty days before/after the ones that
                   // matter, each taking up as much room as a real one.
                   return (
-                    <div
-                      key={dateKey}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '4px 0',
-                        borderBottom: '1px solid var(--colorNeutralStroke2)',
-                        fontSize: 12,
-                        color: 'var(--colorNeutralForeground3)'
-                      }}
-                    >
-                      <span>{formatDateHeader(dateKey)}</span>
-                      <span>No jobs scheduled</span>
+                    <div key={dateKey}>
+                      {showWeekDivider && (
+                        <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0' }} />
+                      )}
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '4px 0',
+                          borderBottom: '1px solid var(--colorNeutralStroke2)',
+                          fontSize: 12,
+                          color: 'var(--colorNeutralForeground3)'
+                        }}
+                      >
+                        <span>{formatDateHeader(dateKey)}</span>
+                        <span>No jobs scheduled</span>
+                      </div>
                     </div>
                   );
                 }
 
                 return (
-                  <div key={dateKey} style={{ marginBottom: 20 }}>
-                    <h4
-                      ref={(el) => {
-                        dateHeaderRefs.current[dateKey] = el;
-                      }}
-                      style={{
-                        margin: 0,
-                        padding: '10px 0',
-                        borderBottom: '1px solid var(--colorNeutralStroke2)',
-                        position: 'sticky',
-                        top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
-                        zIndex: 5,
-                        background: 'var(--colorNeutralBackground1)',
-                        fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
-                        transition: 'font-size 0.15s ease'
-                      }}
-                    >
-                      {formatDateHeader(dateKey)}
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                      {Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
-                        <div key={subName}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: 'var(--colorNeutralForeground2)',
-                              marginBottom: 6
-                            }}
-                          >
-                            {subName}
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {jobsForSub.map((j) => renderJobRow(j))}
-                          </div>
-                        </div>
-                      ))}
+                  <div key={dateKey}>
+                    {showWeekDivider && (
+                      <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0 16px' }} />
+                    )}
+                    <div style={{ marginBottom: 20 }}>
+                      <h4
+                        ref={(el) => {
+                          dateHeaderRefs.current[dateKey] = el;
+                        }}
+                        style={{
+                          margin: 0,
+                          padding: '10px 0',
+                          borderBottom: '1px solid var(--colorNeutralStroke2)',
+                          position: 'sticky',
+                          top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
+                          zIndex: 5,
+                          background: 'var(--colorNeutralBackground1)',
+                          fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
+                          transition: 'font-size 0.15s ease'
+                        }}
+                      >
+                        {formatDateHeader(dateKey)}
+                      </h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+                        {dateGroups[dateKey].map(({ job, subName }) => renderJobRow(job, subName))}
+                      </div>
                     </div>
                   </div>
                 );
