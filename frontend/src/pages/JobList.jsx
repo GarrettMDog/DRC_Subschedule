@@ -494,11 +494,8 @@ export default function JobList() {
             </a>
             {parenText}
           </strong>
-          {subName && (
-            <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground2)' }}>{subName}</div>
-          )}
           <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-            {j.materials ? orderStatusText : ''}
+            {[subName, j.materials ? orderStatusText : null].filter(Boolean).join(' • ')}
           </div>
         </div>
         <ChevronRight20Regular />
