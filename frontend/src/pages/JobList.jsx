@@ -529,7 +529,7 @@ export default function JobList() {
           top: 'var(--header-height, 0px)',
           zIndex: 6,
           background: 'var(--colorNeutralBackground1)',
-          padding: '8px 0'
+          padding: '6px 0'
         }}
       >
         <div style={{ display: 'flex', gap: 6 }}>
@@ -701,33 +701,57 @@ export default function JobList() {
                   </div>
                 </div>
               )}
-              {dateKeys.map((dateKey) => (
-                <div key={dateKey} style={{ marginBottom: 20 }}>
-                  <h4
-                    ref={(el) => {
-                      dateHeaderRefs.current[dateKey] = el;
-                    }}
-                    style={{
-                      margin: 0,
-                      padding: '10px 0',
-                      borderBottom: '1px solid var(--colorNeutralStroke2)',
-                      position: 'sticky',
-                      top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
-                      zIndex: 5,
-                      background: 'var(--colorNeutralBackground1)',
-                      fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
-                      transition: 'font-size 0.15s ease'
-                    }}
-                  >
-                    {formatDateHeader(dateKey)}
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {Object.keys(dateGroups[dateKey]).length === 0 ? (
-                      <p style={{ margin: 0, fontSize: 13, color: 'var(--colorNeutralForeground3)' }}>
-                        No jobs scheduled yet.
-                      </p>
-                    ) : (
-                      Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
+              {dateKeys.map((dateKey) => {
+                const hasJobs = Object.keys(dateGroups[dateKey]).length > 0;
+
+                if (!hasJobs) {
+                  // Compact, single-line, non-sticky row — an empty day has
+                  // nothing underneath it to scroll through, so there's no
+                  // reason to give it the same sticky header treatment and
+                  // full spacing as a day with real content. This is what
+                  // was actually eating most of the screen on a light week:
+                  // a handful of empty days before/after the ones that
+                  // matter, each taking up as much room as a real one.
+                  return (
+                    <div
+                      key={dateKey}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '4px 0',
+                        borderBottom: '1px solid var(--colorNeutralStroke2)',
+                        fontSize: 12,
+                        color: 'var(--colorNeutralForeground3)'
+                      }}
+                    >
+                      <span>{formatDateHeader(dateKey)}</span>
+                      <span>No jobs scheduled</span>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={dateKey} style={{ marginBottom: 20 }}>
+                    <h4
+                      ref={(el) => {
+                        dateHeaderRefs.current[dateKey] = el;
+                      }}
+                      style={{
+                        margin: 0,
+                        padding: '10px 0',
+                        borderBottom: '1px solid var(--colorNeutralStroke2)',
+                        position: 'sticky',
+                        top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
+                        zIndex: 5,
+                        background: 'var(--colorNeutralBackground1)',
+                        fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
+                        transition: 'font-size 0.15s ease'
+                      }}
+                    >
+                      {formatDateHeader(dateKey)}
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {Object.entries(dateGroups[dateKey]).map(([subName, jobsForSub]) => (
                         <div key={subName}>
                           <div
                             style={{
@@ -743,11 +767,11 @@ export default function JobList() {
                             {jobsForSub.map((j) => renderJobRow(j))}
                           </div>
                         </div>
-                      ))
-                    )}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </>
           );
         })()}
