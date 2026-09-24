@@ -780,6 +780,29 @@ export default function JobList() {
                   onChange={(newValue) => setForm({ ...form, address: newValue })}
                 />
               </Field>
+
+              <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
+              <Field label="Subcontractor">
+                <Dropdown
+                  placeholder="Select a subcontractor"
+                  value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
+                  onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
+                >
+                  {subcontractors.map((s) => (
+                    <Option key={s.id} value={String(s.id)}>
+                      {s.company_name}
+                    </Option>
+                  ))}
+                </Dropdown>
+              </Field>
+              <Field label="Date">
+                <Input
+                  type="date"
+                  value={form.date}
+                  onChange={(e) => setForm({ ...form, date: e.target.value })}
+                />
+              </Field>
+
               <Field label="Job type" required>
                 <Dropdown
                   placeholder="Select one or more"
@@ -810,6 +833,15 @@ export default function JobList() {
                   onChange={(e) => setForm({ ...form, yardage: e.target.value })}
                 />
               </Field>
+
+              <Field label="Notes">
+                <Textarea
+                  value={form.notes}
+                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  resize="vertical"
+                />
+              </Field>
+
               <Field label="Materials">
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                   {MATERIAL_OPTIONS.map((m) => (
@@ -854,36 +886,6 @@ export default function JobList() {
                 </Field>
               )}
 
-              <Field label="Notes">
-                <Textarea
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  resize="vertical"
-                />
-              </Field>
-
-              <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
-              <Field label="Subcontractor">
-                <Dropdown
-                  placeholder="Select a subcontractor"
-                  value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
-                  onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
-                >
-                  {subcontractors.map((s) => (
-                    <Option key={s.id} value={String(s.id)}>
-                      {s.company_name}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-              <Field label="Date">
-                <Input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                />
-              </Field>
-
               <Button appearance="primary" type="submit">
                 Add job
               </Button>
@@ -916,109 +918,6 @@ export default function JobList() {
                   Created by {editingJob.created_by}
                 </div>
               )}
-              <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
-                <Field label="Address" required>
-                  <AddressAutocomplete
-                    value={editForm.address}
-                    onChange={(newValue) => setEditForm({ ...editForm, address: newValue })}
-                  />
-                </Field>
-                <Field label="Job type" required>
-                  <Dropdown
-                    placeholder="Select one or more"
-                    multiselect
-                    value={editForm.job_type.join(', ')}
-                    selectedOptions={editForm.job_type}
-                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.selectedOptions })}
-                  >
-                    {JOB_TYPE_OPTIONS.map((t) => (
-                      <Option key={t} value={t}>
-                        {t}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Time">
-                  <Input
-                    type="time"
-                    value={editForm.time}
-                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                  />
-                </Field>
-                <Field label="Yardage">
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={editForm.yardage}
-                    onChange={(e) => setEditForm({ ...editForm, yardage: e.target.value })}
-                  />
-                </Field>
-                <Field label="Materials">
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {MATERIAL_OPTIONS.map((m) => (
-                      <Checkbox
-                        key={m}
-                        label={m}
-                        checked={editForm.materials.includes(m)}
-                        onChange={(_, data) =>
-                          setEditForm({
-                            ...editForm,
-                            materials: data.checked
-                              ? [...editForm.materials, m]
-                              : editForm.materials.filter((x) => x !== m),
-                            // Unchecking a material also clears its ordered
-                            // status — no point keeping a stale "ordered"
-                            // flag for something the job no longer needs.
-                            ordered_materials: data.checked
-                              ? editForm.ordered_materials
-                              : editForm.ordered_materials.filter((x) => x !== m)
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                </Field>
-                {editForm.materials.length > 0 && (
-                  <Field label="Materials ordered">
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      {editForm.materials.map((m) => (
-                        <Checkbox
-                          key={m}
-                          label={m}
-                          checked={editForm.ordered_materials.includes(m)}
-                          onChange={(_, data) =>
-                            setEditForm({
-                              ...editForm,
-                              ordered_materials: data.checked
-                                ? [...editForm.ordered_materials, m]
-                                : editForm.ordered_materials.filter((x) => x !== m)
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
-                  </Field>
-                )}
-                <Field label="Notes">
-                  <Textarea
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    resize="vertical"
-                  />
-                </Field>
-                <Button appearance="primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save changes'}
-                </Button>
-              </form>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Button appearance="secondary" onClick={() => handleDuplicateJob(editingJob)}>
-                  Duplicate this job
-                </Button>
-                <Button appearance="secondary" onClick={() => handleDeleteJob(editingJob)}>
-                  Delete this job
-                </Button>
-              </div>
 
               <div>
                 <h4 style={{ marginBottom: 12 }}>Assigned subcontractors ({jobAssignments.length})</h4>
@@ -1087,6 +986,110 @@ export default function JobList() {
                     </Button>
                   </form>
                 </div>
+              </div>
+
+              <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
+                <Field label="Address" required>
+                  <AddressAutocomplete
+                    value={editForm.address}
+                    onChange={(newValue) => setEditForm({ ...editForm, address: newValue })}
+                  />
+                </Field>
+                <Field label="Job type" required>
+                  <Dropdown
+                    placeholder="Select one or more"
+                    multiselect
+                    value={editForm.job_type.join(', ')}
+                    selectedOptions={editForm.job_type}
+                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.selectedOptions })}
+                  >
+                    {JOB_TYPE_OPTIONS.map((t) => (
+                      <Option key={t} value={t}>
+                        {t}
+                      </Option>
+                    ))}
+                  </Dropdown>
+                </Field>
+                <Field label="Time">
+                  <Input
+                    type="time"
+                    value={editForm.time}
+                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                  />
+                </Field>
+                <Field label="Yardage">
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={editForm.yardage}
+                    onChange={(e) => setEditForm({ ...editForm, yardage: e.target.value })}
+                  />
+                </Field>
+                <Field label="Notes">
+                  <Textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    resize="vertical"
+                  />
+                </Field>
+                <Field label="Materials">
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    {MATERIAL_OPTIONS.map((m) => (
+                      <Checkbox
+                        key={m}
+                        label={m}
+                        checked={editForm.materials.includes(m)}
+                        onChange={(_, data) =>
+                          setEditForm({
+                            ...editForm,
+                            materials: data.checked
+                              ? [...editForm.materials, m]
+                              : editForm.materials.filter((x) => x !== m),
+                            // Unchecking a material also clears its ordered
+                            // status — no point keeping a stale "ordered"
+                            // flag for something the job no longer needs.
+                            ordered_materials: data.checked
+                              ? editForm.ordered_materials
+                              : editForm.ordered_materials.filter((x) => x !== m)
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                </Field>
+                {editForm.materials.length > 0 && (
+                  <Field label="Materials ordered">
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                      {editForm.materials.map((m) => (
+                        <Checkbox
+                          key={m}
+                          label={m}
+                          checked={editForm.ordered_materials.includes(m)}
+                          onChange={(_, data) =>
+                            setEditForm({
+                              ...editForm,
+                              ordered_materials: data.checked
+                                ? [...editForm.ordered_materials, m]
+                                : editForm.ordered_materials.filter((x) => x !== m)
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </Field>
+                )}
+                <Button appearance="primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save changes'}
+                </Button>
+              </form>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Button appearance="secondary" onClick={() => handleDuplicateJob(editingJob)}>
+                  Duplicate this job
+                </Button>
+                <Button appearance="secondary" onClick={() => handleDeleteJob(editingJob)}>
+                  Delete this job
+                </Button>
               </div>
 
               <div>
