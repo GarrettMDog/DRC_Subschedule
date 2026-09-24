@@ -118,6 +118,14 @@ export default function JobList() {
   // that something's still active behind it.
   const [activePanel, setActivePanel] = useState(null);
 
+  // How many weeks (starting with the current one) are currently shown —
+  // the Jobs tab defaults to just the current week, with a button to
+  // reveal more one week at a time, up to the existing 4-week/28-day
+  // planning horizon used elsewhere in this app (e.g. the subcontractor
+  // profile's "Next 4 weeks" section).
+  const [visibleWeeks, setVisibleWeeks] = useState(1);
+  const MAX_VISIBLE_WEEKS = 4;
+
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
   // that view no longer exists (Dashboard is calendar-only now).
@@ -705,6 +713,32 @@ export default function JobList() {
             return !isWeekend || dateGroups[dateKey].length > 0;
           });
 
+          // The cutoff date for however many weeks are currently revealed.
+          // Each week runs through Friday, rolling forward to the next
+          // Friday if today happens to fall on a weekend, and stretching
+          // to include Saturday if that Saturday specifically has an
+          // active job on it. Computed iteratively rather than as a fixed
+          // "+7 days" offset, since each successive week needs to check
+          // its own Saturday independently.
+          let weekCutoff = new Date();
+          for (let w = 0; w < visibleWeeks; w++) {
+            const dayOfWeek = weekCutoff.getDay();
+            const daysUntilFriday = ((5 - dayOfWeek) % 7 + 7) % 7;
+            weekCutoff.setDate(weekCutoff.getDate() + daysUntilFriday);
+            const saturday = new Date(weekCutoff);
+            saturday.setDate(saturday.getDate() + 1);
+            const saturdayYMD = toYMD(saturday);
+            if (dateGroups[saturdayYMD] && dateGroups[saturdayYMD].length > 0) {
+              weekCutoff = saturday;
+            }
+            if (w < visibleWeeks - 1) {
+              weekCutoff.setDate(weekCutoff.getDate() + 1);
+            }
+          }
+          const weekCutoffYMD = toYMD(weekCutoff);
+          const withinRevealedWeeks = visibleDateKeys.filter((dateKey) => dateKey <= weekCutoffYMD);
+          const hasMoreWeeks = visibleWeeks < MAX_VISIBLE_WEEKS && visibleDateKeys.some((d) => d > weekCutoffYMD);
+
           return (
             <>
               {unassigned.length > 0 && (
@@ -715,7 +749,7 @@ export default function JobList() {
                   </div>
                 </div>
               )}
-              {visibleDateKeys.map((dateKey, index) => {
+              {withinRevealedWeeks.map((dateKey, index) => {
                 const hasJobs = dateGroups[dateKey].length > 0;
                 // A divider between each week — right before a Monday, as
                 // long as it isn't the very first thing in the list (no
@@ -741,7 +775,6 @@ export default function JobList() {
                           display: 'flex',
                           justifyContent: 'space-between',
                           padding: '4px 0',
-                          borderBottom: '1px solid var(--colorNeutralStroke2)',
                           fontSize: 12,
                           color: 'var(--colorNeutralForeground3)'
                         }}
@@ -766,7 +799,6 @@ export default function JobList() {
                         style={{
                           margin: 0,
                           padding: '10px 0',
-                          borderBottom: '1px solid var(--colorNeutralStroke2)',
                           position: 'sticky',
                           top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
                           zIndex: 5,
@@ -784,6 +816,13 @@ export default function JobList() {
                   </div>
                 );
               })}
+              {hasMoreWeeks && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                  <Button appearance="secondary" onClick={() => setVisibleWeeks((w) => w + 1)}>
+                    Show next week
+                  </Button>
+                </div>
+              )}
             </>
           );
         })()}
