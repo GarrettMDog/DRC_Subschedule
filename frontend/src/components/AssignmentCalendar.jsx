@@ -105,55 +105,57 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
         </div>
       )}
 
-      <div className="calendar-grid">
-        {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="calendar-weekday">
-            {label}
-          </div>
-        ))}
-
-        {days.map((day) => {
-          const ymd = toYMD(day);
-          const isOutsideMonth = day.getMonth() !== month;
-          const isToday = ymd === todayYMD;
-          const dayAssignments = assignmentsByDay[ymd] || [];
-          const visible = dayAssignments.slice(0, MAX_PILLS_PER_DAY);
-          const extraCount = dayAssignments.length - visible.length;
-
-          return (
-            <div
-              key={ymd}
-              className={`calendar-day ${isOutsideMonth ? 'is-outside-month' : ''} ${
-                isToday ? 'is-today' : ''
-              }`}
-            >
-              <div className="calendar-day-number">{day.getDate()}</div>
-              {visible.map((a) => {
-                const isSelected = selectedJobId === a.job_id;
-                const isDimmed = selectedJobId !== null && !isSelected;
-                const orderStatus = materialsOrderStatus(a);
-                const orderStatusLabel = { none: 'not ordered', partial: 'partially ordered', full: 'ordered' }[
-                  orderStatus
-                ];
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
-                      isDimmed ? 'is-dimmed' : ''
-                    }`}
-                    style={{ background: materialsOrderedColor(orderStatus) }}
-                    title={`${a.subcontractor_name} → ${a.job_address} — materials ${orderStatusLabel}`}
-                    onClick={() => togglePillSelection(a)}
-                  >
-                    {labelMode === 'job' ? a.job_address : a.subcontractor_name}
-                  </button>
-                );
-              })}
-              {extraCount > 0 && <div className="calendar-more">+{extraCount} more</div>}
+      <div className="calendar-grid-scroll">
+        <div className="calendar-grid">
+          {WEEKDAY_LABELS.map((label) => (
+            <div key={label} className="calendar-weekday">
+              {label}
             </div>
-          );
-        })}
+          ))}
+
+          {days.map((day) => {
+            const ymd = toYMD(day);
+            const isOutsideMonth = day.getMonth() !== month;
+            const isToday = ymd === todayYMD;
+            const dayAssignments = assignmentsByDay[ymd] || [];
+            const visible = dayAssignments.slice(0, MAX_PILLS_PER_DAY);
+            const extraCount = dayAssignments.length - visible.length;
+
+            return (
+              <div
+                key={ymd}
+                className={`calendar-day ${isOutsideMonth ? 'is-outside-month' : ''} ${
+                  isToday ? 'is-today' : ''
+                }`}
+              >
+                <div className="calendar-day-number">{day.getDate()}</div>
+                {visible.map((a) => {
+                  const isSelected = selectedJobId === a.job_id;
+                  const isDimmed = selectedJobId !== null && !isSelected;
+                  const orderStatus = materialsOrderStatus(a);
+                  const orderStatusLabel = { none: 'not ordered', partial: 'partially ordered', full: 'ordered' }[
+                    orderStatus
+                  ];
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
+                        isDimmed ? 'is-dimmed' : ''
+                      }`}
+                      style={{ background: materialsOrderedColor(orderStatus) }}
+                      title={`${a.subcontractor_name} → ${a.job_address} — materials ${orderStatusLabel}`}
+                      onClick={() => togglePillSelection(a)}
+                    >
+                      {labelMode === 'job' ? a.job_address : a.subcontractor_name}
+                    </button>
+                  );
+                })}
+                {extraCount > 0 && <div className="calendar-more">+{extraCount} more</div>}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

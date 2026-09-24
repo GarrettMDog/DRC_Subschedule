@@ -9,7 +9,7 @@ export default function OfficeDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [labelMode, setLabelMode] = useState('subcontractor'); // 'subcontractor' | 'job'
+  const [labelMode, setLabelMode] = useState('job'); // 'subcontractor' | 'job'
   const [selectedJobId, setSelectedJobId] = useState(null);
 
   async function loadAll() {
