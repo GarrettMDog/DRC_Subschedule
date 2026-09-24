@@ -1,5 +1,5 @@
 /**
- * CreOps' own emblem — a tobacco leaf outline, drawn as an inline SVG
+ * CrOps' own emblem — a tobacco leaf outline, drawn as an inline SVG
  * rather than reusing the raster PNGs built for the Teams app manifest.
  * Those are fixed white-on-transparent, built for Teams' own dark
  * sidebar specifically; this instead uses currentColor for both stroke

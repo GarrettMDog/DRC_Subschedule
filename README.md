@@ -1,4 +1,4 @@
-# SubSchedule (placeholder name — rename freely)
+# CrOps
 
 A standalone subcontractor scheduling tool for DRC. Separate app, separate repo,
 separate deploy from Bedrock — no shared data or code between them.
@@ -49,7 +49,7 @@ office side calls **its own backend API**, not Microsoft Graph — that requires
 to expose its own scope rather than just requesting a Graph permission. Steps, in order:
 
 1. **Register the app** — Entra admin center → App registrations → New registration.
-   Name it (e.g. "SubSchedule"), account type: single tenant (this org only). Don't add
+   Name it (e.g. "CrOps"), account type: single tenant (this org only). Don't add
    a redirect URI on this screen — that's configured next.
 
 2. **Add a redirect URI** — open the app → **Authentication** → **Add Redirect URI** →

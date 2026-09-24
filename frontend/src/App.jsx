@@ -14,7 +14,7 @@ function SignInGate() {
   const { instance } = useMsal();
   return (
     <div style={{ display: 'grid', placeItems: 'center', height: '100vh', gap: 16 }}>
-      <h2>CreOps</h2>
+      <h2>CrOps</h2>
       <Button appearance="primary" onClick={() => instance.loginRedirect(loginRequest)}>
         Sign in with Microsoft
       </Button>

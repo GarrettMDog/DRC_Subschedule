@@ -40,6 +40,6 @@ app.use('/api/todos', requireOfficeAuth, todosRouter);
 app.use('/api/my-schedule/:token', myScheduleRouter);
 
 app.listen(PORT, () => {
-  console.log(`SubSchedule backend listening on port ${PORT}`);
+  console.log(`CrOps backend listening on port ${PORT}`);
   console.log(`CORS allowing origin: ${FRONTEND_ORIGIN}`);
 });
