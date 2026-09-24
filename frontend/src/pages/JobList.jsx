@@ -148,6 +148,10 @@ export default function JobList() {
   // measures the real rendered height the same way OfficeLayout does for
   // its own header, rather than guessing a pixel offset that could be
   // wrong on some screen size.
+  // Depends on `loading`, not just mount-once: on first render the page
+  // shows "Loading…" instead of the real toolbar, so toolbarRef.current
+  // is still null the first time this runs — it only becomes available
+  // once loading flips to false and the actual toolbar div exists.
   useEffect(() => {
     const el = toolbarRef.current;
     if (!el) return;
@@ -158,7 +162,7 @@ export default function JobList() {
     const observer = new ResizeObserver(updateHeight);
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [loading]);
 
   async function handleAdd(e) {
     e.preventDefault();
