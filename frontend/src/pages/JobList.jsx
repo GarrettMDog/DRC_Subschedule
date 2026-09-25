@@ -475,7 +475,7 @@ export default function JobList() {
     return (
       <div
         key={subName ? `${j.id}-${subName}` : j.id}
-        className="list-row"
+        className="list-row job-row"
         style={{ '--status-color': materialsOrderedColor(orderStatus) }}
         onClick={() => openJobDetail(j)}
       >

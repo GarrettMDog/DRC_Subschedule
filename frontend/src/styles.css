@@ -199,3 +199,11 @@ body {
   background: var(--colorNeutralBackground1Hover);
   border-color: var(--colorNeutralStroke1);
 }
+
+/* Job tiles specifically get 20% less padding than the shared .list-row
+   default — shrinks each row's footprint so more fit on screen at once,
+   without affecting the Subcontractors tab's own list, which also uses
+   .list-row but wasn't asked to shrink. */
+.job-row {
+  padding: 11px 14px;
+}
