@@ -97,6 +97,11 @@ export default function JobList() {
   // so it lives right alongside everything else about the job.
   const [assignForm, setAssignForm] = useState(EMPTY_ASSIGN_FORM);
   const [assignConflictWarning, setAssignConflictWarning] = useState(null);
+  // Collapsed by default once a job already has a subcontractor assigned —
+  // reset to false (collapsed) each time a different job is opened, since
+  // whether the form should start open depends on that specific job's own
+  // assignment count, checked at render time via jobAssignments.length.
+  const [assignFormOpen, setAssignFormOpen] = useState(false);
   const [assigning, setAssigning] = useState(false);
 
   // Editing an existing assignment's dates — this had nowhere to live after
@@ -278,6 +283,7 @@ export default function JobList() {
     });
     setAssignForm(EMPTY_ASSIGN_FORM);
     setAssignConflictWarning(null);
+    setAssignFormOpen(false);
   }
 
   async function handleSaveEdit(e) {
@@ -377,6 +383,7 @@ export default function JobList() {
         );
       }
       setAssignForm(EMPTY_ASSIGN_FORM);
+      setAssignFormOpen(false);
       await load();
     } catch (err) {
       setError(err.message || 'Could not assign that subcontractor.');
@@ -1025,7 +1032,18 @@ export default function JobList() {
               )}
 
               <div>
-                <h4 style={{ marginBottom: 12 }}>Assigned subcontractors ({jobAssignments.length})</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <h4 style={{ margin: 0 }}>Assigned subcontractors ({jobAssignments.length})</h4>
+                  {jobAssignments.length > 0 && (
+                    <Button
+                      size="small"
+                      appearance={assignFormOpen ? 'primary' : 'subtle'}
+                      icon={<Add20Regular />}
+                      aria-label="Add another subcontractor"
+                      onClick={() => setAssignFormOpen((open) => !open)}
+                    />
+                  )}
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {jobAssignments.map((a) => (
                     <div
@@ -1054,33 +1072,34 @@ export default function JobList() {
                   {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}
                 </div>
 
-                <div style={{ marginTop: 16 }}>
-                  <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
-                  {assignConflictWarning && (
-                    <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-                      <MessageBarBody>{assignConflictWarning}</MessageBarBody>
-                    </MessageBar>
-                  )}
-                  <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
-                    <Field label="Subcontractor" required>
-                      <Dropdown
-                        placeholder="Select a subcontractor"
-                        value={
-                          subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
-                        }
-                        onOptionSelect={(_, data) =>
-                          setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
-                        }
-                      >
-                        {subcontractors.map((s) => (
-                          <Option key={s.id} value={String(s.id)}>
-                            {s.company_name}
-                          </Option>
-                        ))}
-                      </Dropdown>
-                    </Field>
-                    <Field label="Date" required>
-                      <Input
+                {(jobAssignments.length === 0 || assignFormOpen) && (
+                  <div style={{ marginTop: 16 }}>
+                    <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
+                    {assignConflictWarning && (
+                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
+                        <MessageBarBody>{assignConflictWarning}</MessageBarBody>
+                      </MessageBar>
+                    )}
+                    <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
+                      <Field label="Subcontractor" required>
+                        <Dropdown
+                          placeholder="Select a subcontractor"
+                          value={
+                            subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
+                          }
+                          onOptionSelect={(_, data) =>
+                            setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
+                          }
+                        >
+                          {subcontractors.map((s) => (
+                            <Option key={s.id} value={String(s.id)}>
+                              {s.company_name}
+                            </Option>
+                          ))}
+                        </Dropdown>
+                      </Field>
+                      <Field label="Date" required>
+                        <Input
                         type="date"
                         value={assignForm.date}
                         onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
@@ -1090,7 +1109,8 @@ export default function JobList() {
                       {assigning ? 'Assigning…' : 'Assign'}
                     </Button>
                   </form>
-                </div>
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
