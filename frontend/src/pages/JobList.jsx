@@ -153,6 +153,7 @@ export default function JobList() {
   // that view no longer exists (Dashboard is calendar-only now).
   const [subFilterId, setSubFilterId] = useState(null); // null = show everyone
   const [subFilterText, setSubFilterText] = useState('');
+  const [createdByFilter, setCreatedByFilter] = useState(null); // null = show everyone
 
   async function load() {
     try {
@@ -468,6 +469,15 @@ export default function JobList() {
     return [...result].sort((a, b) => (a.address || '').localeCompare(b.address || ''));
   }, [jobs, searchText]);
 
+  // Distinct list of everyone who's created a job, for the "Created by"
+  // filter's own options — derived from the jobs themselves rather than
+  // a separate lookup, since created_by is just a plain name stored on
+  // each job at creation time (populated from whoever was signed in).
+  const jobCreators = useMemo(
+    () => [...new Set(jobs.map((j) => j.created_by).filter(Boolean))].sort(),
+    [jobs]
+  );
+
   if (loading) return <p>Loading…</p>;
 
   const isCreating = drawerContent === 'create';
@@ -580,7 +590,9 @@ export default function JobList() {
               onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
             />
             <Button
-              appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'subtle'}
+              appearance={
+                activePanel === 'filter' || subFilterId !== null || createdByFilter !== null ? 'primary' : 'subtle'
+              }
               icon={<Filter20Regular />}
               aria-label="Filter"
               onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
@@ -647,6 +659,20 @@ export default function JobList() {
               );
             })()}
           </Field>
+          <Field label="Created by" style={{ minWidth: 160 }}>
+            <Dropdown
+              value={createdByFilter || 'Everyone'}
+              selectedOptions={[createdByFilter || 'all']}
+              onOptionSelect={(_, data) => setCreatedByFilter(data.optionValue === 'all' ? null : data.optionValue)}
+            >
+              <Option value="all">Everyone</Option>
+              {jobCreators.map((name) => (
+                <Option key={name} value={name}>
+                  {name}
+                </Option>
+              ))}
+            </Dropdown>
+          </Field>
         </div>
       )}
 
@@ -665,13 +691,18 @@ export default function JobList() {
 
           // Filtering by a specific subcontractor hides everything else,
           // unassigned jobs included — but now checks whether ANY of a
-          // job's assignments match, not just a single one.
-          const filtered =
-            subFilterId === null
-              ? jobsWithAssignments
-              : jobsWithAssignments.filter((x) =>
-                  x.activeAssignments.some((a) => a.subcontractor_id === subFilterId)
-                );
+          // job's assignments match, not just a single one. Created-by is
+          // a separate, independent filter — a job only needs to satisfy
+          // whichever of these two are actually set.
+          const filtered = jobsWithAssignments.filter((x) => {
+            if (subFilterId !== null && !x.activeAssignments.some((a) => a.subcontractor_id === subFilterId)) {
+              return false;
+            }
+            if (createdByFilter !== null && x.job.created_by !== createdByFilter) {
+              return false;
+            }
+            return true;
+          });
 
           const unassigned = filtered.filter((x) => x.activeAssignments.length === 0).map((x) => x.job);
 
