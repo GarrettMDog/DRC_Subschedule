@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Field,
@@ -29,6 +29,7 @@ import { useApiToken } from '../auth/useApiToken';
 import { useConfirmDialog } from '../components/useConfirmDialog';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import LeafIcon from '../components/LeafIcon';
+import { NavVisibilityContext } from '../components/OfficeLayout';
 import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
 import {
   STATUS_HEX,
@@ -136,6 +137,16 @@ export default function JobList() {
   // screen. Doesn't touch the nav tabs above, which live in the shared
   // layout and are already fairly compact on their own.
   const [isMinimized, setIsMinimized] = useState(false);
+  const { setNavHidden } = useContext(NavVisibilityContext);
+
+  // Keeps the shared nav bar in sync with this page's own minimize toggle.
+  // The cleanup always restores it (setNavHidden(false)) — critical for
+  // when navigating away from Jobs while minimized, since nothing else
+  // would otherwise bring the nav bar back on whatever page comes next.
+  useEffect(() => {
+    setNavHidden(isMinimized);
+    return () => setNavHidden(false);
+  }, [isMinimized, setNavHidden]);
 
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since

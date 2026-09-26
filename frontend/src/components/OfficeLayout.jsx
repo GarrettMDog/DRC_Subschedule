@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { createContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 const NAV_ITEMS = [
@@ -8,9 +8,25 @@ const NAV_ITEMS = [
   { value: '/services', label: 'Services' }
 ];
 
+// Lets a page reach up and hide the shared nav bar too — used by the Jobs
+// tab's own minimize toggle, so minimizing hides the nav tabs as well as
+// its own toolbar. A page that hides the nav must restore it (setNavHidden
+// back to false) on unmount, since nothing else will — leaving it hidden
+// on some other page would remove the only way to navigate at all.
+export const NavVisibilityContext = createContext({ setNavHidden: () => {} });
+
 export default function OfficeLayout({ children }) {
   const location = useLocation();
   const headerRef = useRef(null);
+  const [navHidden, setNavHidden] = useState(false);
+
+  // Safety net on top of each page's own cleanup: whichever page is active,
+  // switching routes always restores the nav bar. Getting stuck with it
+  // hidden on some other page would mean no way to navigate at all, so this
+  // doesn't rely solely on the page that hid it cleaning up correctly.
+  useEffect(() => {
+    setNavHidden(false);
+  }, [location.pathname]);
 
   // The header's height isn't fixed — the nav row wraps to a second line
   // on narrow/mobile screens (see the comment below), so anything else
@@ -31,48 +47,52 @@ export default function OfficeLayout({ children }) {
   }, []);
 
   return (
-    <div>
-      <header
-        ref={headerRef}
-        style={{
-          padding: '8px 16px',
-          borderBottom: '1px solid var(--colorNeutralStroke2)',
-          position: 'sticky',
-          top: 0,
-          background: 'var(--colorNeutralBackground1)',
-          zIndex: 10
-        }}
-      >
-        {/* Plain flex-wrap nav, not Fluent's TabList — TabList is documented to never
-            wrap or scroll on narrow containers (Fluent's own usage guidance), so on a
-            phone-width screen with 3 labels including "Subcontractors" it would just
-            run off the edge instead of dropping to a second line. */}
-        <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {NAV_ITEMS.map((item) => {
-            const active = location.pathname === item.value;
-            return (
-              <Link key={item.value} to={item.value} style={{ textDecoration: 'none' }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    padding: '8px 14px',
-                    borderRadius: 'var(--borderRadiusMedium, 4px)',
-                    fontSize: 14,
-                    fontWeight: active ? 600 : 400,
-                    color: active ? 'var(--colorBrandForeground1)' : 'var(--colorNeutralForeground2)',
-                    background: active ? 'var(--colorBrandBackground2)' : 'transparent'
-                  }}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </header>
-      <main style={{ padding: '16px 24px' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>{children}</div>
-      </main>
-    </div>
+    <NavVisibilityContext.Provider value={{ setNavHidden }}>
+      <div>
+        <header
+          ref={headerRef}
+          style={{
+            padding: '8px 16px',
+            borderBottom: '1px solid var(--colorNeutralStroke2)',
+            position: 'sticky',
+            top: 0,
+            background: 'var(--colorNeutralBackground1)',
+            zIndex: 10
+          }}
+        >
+          {/* Plain flex-wrap nav, not Fluent's TabList — TabList is documented to never
+              wrap or scroll on narrow containers (Fluent's own usage guidance), so on a
+              phone-width screen with 3 labels including "Subcontractors" it would just
+              run off the edge instead of dropping to a second line. */}
+          {!navHidden && (
+            <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {NAV_ITEMS.map((item) => {
+                const active = location.pathname === item.value;
+                return (
+                  <Link key={item.value} to={item.value} style={{ textDecoration: 'none' }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '8px 14px',
+                        borderRadius: 'var(--borderRadiusMedium, 4px)',
+                        fontSize: 14,
+                        fontWeight: active ? 600 : 400,
+                        color: active ? 'var(--colorBrandForeground1)' : 'var(--colorNeutralForeground2)',
+                        background: active ? 'var(--colorBrandBackground2)' : 'transparent'
+                      }}
+                    >
+                      {item.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </nav>
+          )}
+        </header>
+        <main style={{ padding: '16px 24px' }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto' }}>{children}</div>
+        </main>
+      </div>
+    </NavVisibilityContext.Provider>
   );
 }
