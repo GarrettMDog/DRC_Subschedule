@@ -21,7 +21,8 @@ import {
   Dismiss24Regular,
   Search20Regular,
   Filter20Regular,
-  Add20Regular
+  Add20Regular,
+  Subtract20Regular
 } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
@@ -128,6 +129,13 @@ export default function JobList() {
   // shows only that week, replacing what was there rather than adding to
   // it, so "next week" then "back" returns to exactly this week's view.
   const [weekOffset, setWeekOffset] = useState(0);
+
+  // Lets the toolbar (search/filter/add) and week-navigation row be hidden
+  // entirely, leaving just a small toggle to bring them back — for
+  // maximizing how much of the job list itself is visible on a small
+  // screen. Doesn't touch the nav tabs above, which live in the shared
+  // layout and are already fairly compact on their own.
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
@@ -534,7 +542,7 @@ export default function JobList() {
         ref={toolbarRef}
         style={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 8,
@@ -545,29 +553,38 @@ export default function JobList() {
           padding: '6px 0'
         }}
       >
-        <div style={{ display: 'flex', gap: 6 }}>
-          <Button
-            appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
-            icon={<Search20Regular />}
-            aria-label="Search"
-            onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
-          />
-          <Button
-            appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'subtle'}
-            icon={<Filter20Regular />}
-            aria-label="Filter"
-            onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
-          />
-          <Button
-            appearance="primary"
-            icon={<Add20Regular />}
-            aria-label="Add job"
-            onClick={() => setDrawerContent('create')}
-          />
-        </div>
+        <Button
+          appearance="subtle"
+          size="small"
+          icon={isMinimized ? <Add20Regular /> : <Subtract20Regular />}
+          aria-label={isMinimized ? 'Expand' : 'Minimize'}
+          onClick={() => setIsMinimized((m) => !m)}
+        />
+        {!isMinimized && (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button
+              appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
+              icon={<Search20Regular />}
+              aria-label="Search"
+              onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
+            />
+            <Button
+              appearance={activePanel === 'filter' || subFilterId !== null ? 'primary' : 'subtle'}
+              icon={<Filter20Regular />}
+              aria-label="Filter"
+              onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
+            />
+            <Button
+              appearance="primary"
+              icon={<Add20Regular />}
+              aria-label="Add job"
+              onClick={() => setDrawerContent('create')}
+            />
+          </div>
+        )}
       </div>
 
-      {activePanel === 'search' && (
+      {!isMinimized && activePanel === 'search' && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Search" style={{ minWidth: 200, flex: 1 }}>
             <Input
@@ -580,7 +597,7 @@ export default function JobList() {
         </div>
       )}
 
-      {activePanel === 'filter' && (
+      {!isMinimized && activePanel === 'filter' && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Subcontractor" style={{ minWidth: 200 }}>
             {(() => {
@@ -767,32 +784,34 @@ export default function JobList() {
                 </div>
               )}
 
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 12
-                }}
-              >
-                <Button
-                  appearance="subtle"
-                  disabled={weekOffset <= 0}
-                  onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+              {!isMinimized && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 12
+                  }}
                 >
-                  ← Previous week
-                </Button>
-                <strong>
-                  {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
-                </strong>
-                <Button
-                  appearance="subtle"
-                  disabled={weekOffset >= 3}
-                  onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
-                >
-                  Next week →
-                </Button>
-              </div>
+                  <Button
+                    appearance="subtle"
+                    disabled={weekOffset <= 0}
+                    onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+                  >
+                    ← Previous week
+                  </Button>
+                  <strong>
+                    {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
+                  </strong>
+                  <Button
+                    appearance="subtle"
+                    disabled={weekOffset >= 3}
+                    onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
+                  >
+                    Next week →
+                  </Button>
+                </div>
+              )}
               {withinRevealedWeeks.map((dateKey, index) => {
                 const hasJobs = dateGroups[dateKey].length > 0;
                 // A divider between each week — right before a Monday, as
