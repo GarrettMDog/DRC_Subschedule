@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@fluentui/react-components';
 import { materialsOrderedColor, materialsOrderStatus } from '../theme';
 
@@ -32,6 +32,41 @@ function buildMonthGrid(year, month) {
 export default function AssignmentCalendar({ assignments, selectedJobId, onSelectJob }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const navRowRef = useRef(null);
+  const weekdayScrollRef = useRef(null);
+  const gridScrollRef = useRef(null);
+
+  // Mirrors the grid's horizontal scroll position onto the weekday row's
+  // own scroll container, keeping the two in sync. They have to be two
+  // separate scroll containers rather than one shared one — an element
+  // with overflow-x: auto forces its own overflow-y to compute as auto
+  // too (a real CSS spec behavior), which would silently turn the grid's
+  // scroll container into an unwanted vertical scroll container as well,
+  // breaking position: sticky for anything inside it. Keeping the sticky
+  // weekday row in its own separate scroll container, outside the grid's,
+  // avoids that entirely.
+  function handleGridScroll() {
+    if (weekdayScrollRef.current && gridScrollRef.current) {
+      weekdayScrollRef.current.scrollLeft = gridScrollRef.current.scrollLeft;
+    }
+  }
+
+  // The month-nav row's height isn't fixed — "September 2026" plus three
+  // buttons could wrap on a narrow screen — so the weekday labels row
+  // (which sticks right below it) can't safely assume a hardcoded pixel
+  // offset. Measuring the real rendered height, same approach used for
+  // the app's own header elsewhere in this project.
+  useEffect(() => {
+    const el = navRowRef.current;
+    if (!el) return;
+    const updateHeight = () => {
+      document.documentElement.style.setProperty('--calendar-nav-height', `${el.offsetHeight}px`);
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -71,13 +106,19 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
   return (
     <div>
       <div
+        ref={navRowRef}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           marginBottom: 8,
           flexWrap: 'wrap',
-          gap: 8
+          gap: 8,
+          position: 'sticky',
+          top: 'var(--header-height, 0px)',
+          zIndex: 6,
+          background: 'var(--colorNeutralBackground1)',
+          paddingBottom: 8
         }}
       >
         <strong>{monthLabel}</strong>
@@ -105,14 +146,27 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
         </div>
       )}
 
-      <div className="calendar-grid-scroll">
-        <div className="calendar-grid">
-          {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className="calendar-weekday">
-              {label}
-            </div>
-          ))}
+      <div
+        style={{
+          position: 'sticky',
+          top: 'calc(var(--header-height, 0px) + var(--calendar-nav-height, 0px))',
+          zIndex: 5,
+          background: 'var(--colorNeutralBackground1)'
+        }}
+      >
+        <div ref={weekdayScrollRef} style={{ overflow: 'hidden' }}>
+          <div className="calendar-weekday-row">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="calendar-weekday">
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
+      <div className="calendar-grid-scroll" ref={gridScrollRef} onScroll={handleGridScroll}>
+        <div className="calendar-grid">
           {days.map((day) => {
             const ymd = toYMD(day);
             const isOutsideMonth = day.getMonth() !== month;
