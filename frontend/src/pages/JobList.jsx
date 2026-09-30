@@ -18,7 +18,7 @@ import {
   DrawerHeaderTitle
 } from '@fluentui/react-components';
 import {
-  ChevronRight20Regular,
+  ChevronRight16Regular,
   Dismiss24Regular,
   Search20Regular,
   Filter20Regular,
@@ -525,39 +525,44 @@ export default function JobList() {
       orderStatus
     ];
 
+    // Secondary info (sub name, materials-ordered status) folds into the
+    // same line as the address now rather than a line of its own — this is
+    // what actually buys back the vertical space; a smaller font alone
+    // wasn't enough. Truncates with an ellipsis rather than wrapping, so a
+    // long address + long secondary text still holds the row to one line.
+    const secondaryText = [subName, j.materials ? orderStatusText : null].filter(Boolean).join(' • ');
+
     return (
       <div
         key={subName ? `${j.id}-${subName}` : j.id}
-        className="list-row job-row"
+        className="list-row job-row job-row-compact"
         style={{ '--status-color': materialsOrderedColor(orderStatus) }}
         onClick={() => openJobDetail(j)}
       >
         {j.notes && (
           <LeafIcon
-            size={13}
+            size={11}
             title="Has notes"
-            style={{ position: 'absolute', top: 10, right: 14, color: 'var(--colorNeutralForeground3)' }}
+            style={{ flexShrink: 0, color: 'var(--colorNeutralForeground3)' }}
           />
         )}
-        <div>
-          <strong>
-            {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{ color: 'inherit', textDecoration: 'underline' }}
-            >
-              {j.address}
-            </a>
-            {parenText}
-          </strong>
-          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-            {[subName, j.materials ? orderStatusText : null].filter(Boolean).join(' • ')}
-          </div>
+        <div className="job-row-text">
+          {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600 }}
+          >
+            {j.address}
+          </a>
+          {parenText}
+          {secondaryText && (
+            <span style={{ color: 'var(--colorNeutralForeground3)', fontWeight: 400 }}> • {secondaryText}</span>
+          )}
         </div>
-        <ChevronRight20Regular />
+        <ChevronRight16Regular style={{ flexShrink: 0 }} />
       </div>
     );
   }

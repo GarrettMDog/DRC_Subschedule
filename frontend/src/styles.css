@@ -201,8 +201,27 @@ body {
 /* Job tiles specifically get less padding than the shared .list-row
    default — shrinks each row's footprint so more fit on screen at once,
    without affecting the Subcontractors tab's own list, which also uses
-   .list-row but wasn't asked to shrink. Reduced twice now: first 20% off
-   the original 14px/18px, then another 20% off that. */
+   .list-row but wasn't asked to shrink. Reduced three times now: 20% off
+   the original 14px/18px, another 20% off that, then collapsed to a single
+   line (see .job-row-compact) with padding tightened again on top of that. */
 .job-row {
-  padding: 9px 11px;
+  padding: 5px 10px;
+}
+
+/* Single-line layout: address, type, sub, and materials status all read
+   on one row, truncating with an ellipsis instead of wrapping. This (not
+   the padding alone) is what actually buys back the vertical space —
+   dropping the second line roughly halves each row's height on top of the
+   tighter padding above. */
+.job-row-compact {
+  gap: 8px;
+}
+
+.job-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
 }
