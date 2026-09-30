@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
@@ -66,6 +67,7 @@ const ASSIGNMENT_STATUS_COLOR = {
 
 export default function JobList() {
   const { getToken } = useApiToken();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const toolbarRef = useRef(null);
 
@@ -180,6 +182,21 @@ export default function JobList() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Lets the Calendar's job-detail popover jump straight to a specific
+  // job's edit view via a link like "/?editJobId=123" — waits for jobs to
+  // actually be loaded first, since this data arrives asynchronously.
+  // Clears the query param once handled so refreshing or navigating back
+  // doesn't re-trigger it.
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    const editJobId = searchParams.get('editJobId');
+    if (!editJobId) return;
+    const job = jobs.find((j) => j.id === Number(editJobId));
+    if (job) openJobDetail(job);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs]);
 
   // The toolbar row (title + search/filter/add buttons) is sticky too now,
   // stacking right below the app's own sticky header. Its height isn't

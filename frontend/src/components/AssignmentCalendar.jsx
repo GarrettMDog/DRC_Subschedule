@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@fluentui/react-components';
-import { materialsOrderedColor, materialsOrderStatus } from '../theme';
+import { useNavigate } from 'react-router-dom';
+import { Button, Popover, PopoverSurface } from '@fluentui/react-components';
+import { Dismiss20Regular } from '@fluentui/react-icons';
+import { materialsOrderedColor, materialsOrderStatus, formatJobType, formatMaterials } from '../theme';
+import { formatDate, formatTime } from '../dateUtils';
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MAX_PILLS_PER_DAY = 3;
+const MOBILE_BREAKPOINT = 600;
 
 function toYMD(date) {
   // Local-time formatting (not toISOString) — avoids the classic UTC
@@ -29,12 +33,83 @@ function buildMonthGrid(year, month) {
   return days;
 }
 
-export default function AssignmentCalendar({ assignments, selectedJobId, onSelectJob }) {
+// The four rows shared by both the desktop popover and the mobile card —
+// same content either way, just a different shell around it.
+function JobDetailRows({ assignment }) {
+  const whatParts = [];
+  if (assignment.job_type) whatParts.push(formatJobType(assignment.job_type));
+  if (assignment.job_yardage) whatParts.push(`${assignment.job_yardage} yards`);
+  if (assignment.materials) whatParts.push(formatMaterials(assignment.materials));
+  const whatText = whatParts.join(' – ');
+
+  const whenParts = [formatDate(assignment.start_date)];
+  if (assignment.job_time) whenParts.push(formatTime(assignment.job_time));
+  const whenText = whenParts.join(', ');
+
+  const rows = [
+    { label: 'Who', value: assignment.subcontractor_name },
+    { label: 'What', value: whatText },
+    { label: 'When', value: whenText },
+    {
+      label: 'Where',
+      value: (
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(assignment.job_address)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'inherit' }}
+        >
+          {assignment.job_address}
+        </a>
+      )
+    }
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {rows.map(
+        (row) =>
+          row.value && (
+            <div key={row.label}>
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  color: 'var(--colorNeutralForeground3)'
+                }}
+              >
+                {row.label}
+              </div>
+              <div style={{ fontSize: 14 }}>{row.value}</div>
+            </div>
+          )
+      )}
+    </div>
+  );
+}
+
+export default function AssignmentCalendar({ assignments }) {
   const today = new Date();
+  const navigate = useNavigate();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [detailAssignment, setDetailAssignment] = useState(null);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
+  );
   const navRowRef = useRef(null);
   const weekdayScrollRef = useRef(null);
   const gridScrollRef = useRef(null);
+
+  useEffect(() => {
+    function updateIsMobile() {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    }
+    window.addEventListener('resize', updateIsMobile);
+    return () => window.removeEventListener('resize', updateIsMobile);
+  }, []);
 
   // Mirrors the grid's horizontal scroll position onto the weekday row's
   // own scroll container, keeping the two in sync. They have to be two
@@ -94,14 +169,18 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
     setViewDate(new Date(today.getFullYear(), today.getMonth(), 1));
   }
 
-  // Clicking a pill highlights every other pill for that same job across the
-  // whole month — clicking the same job again (or Clear) turns it back off.
-  // Selection lives in the parent so the Dashboard's detail panel can share it.
-  function togglePillSelection(assignment) {
-    onSelectJob(selectedJobId === assignment.job_id ? null : assignment.job_id);
+  function openDetail(assignment, el) {
+    setDetailAssignment(assignment);
+    setAnchorEl(el);
   }
-
-  const selectedJob = selectedJobId ? assignments.find((a) => a.job_id === selectedJobId) : null;
+  function closeDetail() {
+    setDetailAssignment(null);
+    setAnchorEl(null);
+  }
+  function goToEdit() {
+    if (!detailAssignment) return;
+    navigate(`/?editJobId=${detailAssignment.job_id}`);
+  }
 
   return (
     <div>
@@ -134,17 +213,6 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
           </Button>
         </div>
       </div>
-
-      {selectedJob && (
-        <div className="calendar-job-banner">
-          <span>
-            Highlighting <strong>{selectedJob.job_address}</strong>
-          </span>
-          <Button size="small" appearance="subtle" onClick={() => onSelectJob(null)}>
-            Clear
-          </Button>
-        </div>
-      )}
 
       <div
         style={{
@@ -184,8 +252,6 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
               >
                 <div className="calendar-day-number">{day.getDate()}</div>
                 {visible.map((a) => {
-                  const isSelected = selectedJobId === a.job_id;
-                  const isDimmed = selectedJobId !== null && !isSelected;
                   const orderStatus = materialsOrderStatus(a);
                   const orderStatusLabel = { none: 'not ordered', partial: 'partially ordered', full: 'ordered' }[
                     orderStatus
@@ -194,12 +260,10 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
                     <button
                       key={a.id}
                       type="button"
-                      className={`calendar-pill ${isSelected ? 'is-selected-job' : ''} ${
-                        isDimmed ? 'is-dimmed' : ''
-                      }`}
+                      className="calendar-pill"
                       style={{ background: materialsOrderedColor(orderStatus) }}
                       title={`${a.subcontractor_name} → ${a.job_address} — materials ${orderStatusLabel}`}
-                      onClick={() => togglePillSelection(a)}
+                      onClick={(e) => openDetail(a, e.currentTarget)}
                     >
                       {a.job_address}
                     </button>
@@ -211,6 +275,76 @@ export default function AssignmentCalendar({ assignments, selectedJobId, onSelec
           })}
         </div>
       </div>
+
+      {/* Desktop: a true floating popover, anchored to whichever pill was
+          clicked. Mobile: a full-width card instead — a floating popover
+          has nowhere near enough room to work with next to a small pill
+          on a narrow phone screen. */}
+      {!isMobile && (
+        <Popover
+          open={!!detailAssignment}
+          onOpenChange={(_, data) => {
+            if (!data.open) closeDetail();
+          }}
+          positioning={{ target: anchorEl, position: 'after', align: 'top' }}
+          withArrow
+        >
+          <PopoverSurface style={{ maxWidth: 280, padding: 16 }}>
+            {detailAssignment && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <JobDetailRows assignment={detailAssignment} />
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button size="small" appearance="secondary" onClick={goToEdit}>
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            )}
+          </PopoverSurface>
+        </Popover>
+      )}
+
+      {isMobile && detailAssignment && (
+        <div
+          onClick={closeDetail}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.35)',
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'flex-end'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              background: 'var(--colorNeutralBackground1)',
+              borderRadius: '12px 12px 0 0',
+              padding: 20,
+              paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 14
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                size="small"
+                appearance="subtle"
+                icon={<Dismiss20Regular />}
+                aria-label="Close"
+                onClick={closeDetail}
+              />
+            </div>
+            <JobDetailRows assignment={detailAssignment} />
+            <Button appearance="primary" onClick={goToEdit}>
+              Edit
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

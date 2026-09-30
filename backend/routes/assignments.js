@@ -9,7 +9,8 @@ router.get('/', (req, res) => {
   const rows = db
     .prepare(
       `SELECT a.*, s.company_name AS subcontractor_name, j.name AS job_name, j.address AS job_address,
-              j.job_type AS job_type, j.materials AS materials, j.ordered_materials AS ordered_materials
+              j.job_type AS job_type, j.materials AS materials, j.ordered_materials AS ordered_materials,
+              j.time AS job_time, j.yardage AS job_yardage
        FROM assignments a
        JOIN subcontractors s ON s.id = a.subcontractor_id
        JOIN jobs j ON j.id = a.job_id

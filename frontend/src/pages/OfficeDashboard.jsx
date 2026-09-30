@@ -9,7 +9,6 @@ export default function OfficeDashboard() {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedJobId, setSelectedJobId] = useState(null);
 
   async function loadAll() {
     try {
@@ -39,7 +38,7 @@ export default function OfficeDashboard() {
         </MessageBar>
       )}
 
-      <AssignmentCalendar assignments={assignments} selectedJobId={selectedJobId} onSelectJob={setSelectedJobId} />
+      <AssignmentCalendar assignments={assignments} />
     </div>
   );
 }
