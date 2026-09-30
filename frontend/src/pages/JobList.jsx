@@ -85,11 +85,6 @@ export default function JobList() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // Surfaced when creating a job and assigning a sub to it in one step
-  // produces a scheduling conflict. Shown at the page level (not inside the
-  // drawer) since the drawer closes right after — this needs to stay
-  // visible past that close, not disappear along with it.
-  const [createAssignWarning, setCreateAssignWarning] = useState(null);
 
   // 'create' shows the add form (small drawer). A job object shows its
   // full-screen edit view. null closes the drawer entirely.
@@ -100,7 +95,6 @@ export default function JobList() {
   // Assigning a subcontractor to this job — moved here from the Dashboard,
   // so it lives right alongside everything else about the job.
   const [assignForm, setAssignForm] = useState(EMPTY_ASSIGN_FORM);
-  const [assignConflictWarning, setAssignConflictWarning] = useState(null);
   // Collapsed by default once a job already has a subcontractor assigned —
   // reset to false (collapsed) each time a different job is opened, since
   // whether the form should start open depends on that specific job's own
@@ -114,7 +108,6 @@ export default function JobList() {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [assignmentEditForm, setAssignmentEditForm] = useState({ subcontractor_id: '', date: '' });
   const [savingAssignment, setSavingAssignment] = useState(false);
-  const [assignmentEditWarning, setAssignmentEditWarning] = useState(null);
 
   // Search — still useful for narrowing which jobs show up at all, applied
   // before the date/subcontractor grouping below.
@@ -267,7 +260,6 @@ export default function JobList() {
   async function handleAdd(e) {
     e.preventDefault();
     setError(null);
-    setCreateAssignWarning(null);
 
     if (form.subcontractor_id && !form.date) {
       setError('Pick a date for the assignment, or clear the subcontractor if you don\'t want to assign one yet.');
@@ -282,21 +274,14 @@ export default function JobList() {
       const token = await getToken();
       const newJob = await api.addJob(token, form);
 
-      // Optional — only if a subcontractor was actually picked. Same soft
-      // conflict handling as the standalone assign form: saved either way,
-      // just flagged if it overlaps something else that sub is already on.
+      // Optional — only if a subcontractor was actually picked.
       if (form.subcontractor_id) {
-        const { conflicts } = await api.addAssignment(token, {
+        await api.addAssignment(token, {
           subcontractor_id: form.subcontractor_id,
           job_id: newJob.id,
           start_date: form.date,
           end_date: form.date
         });
-        if (conflicts.length > 0) {
-          setCreateAssignWarning(
-            `Job created, but heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
-          );
-        }
       }
 
       setForm(EMPTY_FORM);
@@ -319,7 +304,6 @@ export default function JobList() {
       notes: job.notes || ''
     });
     setAssignForm(EMPTY_ASSIGN_FORM);
-    setAssignConflictWarning(null);
     setAssignFormOpen(false);
   }
 
@@ -404,21 +388,15 @@ export default function JobList() {
   async function handleAssignSub(e) {
     e.preventDefault();
     setError(null);
-    setAssignConflictWarning(null);
     setAssigning(true);
     try {
       const token = await getToken();
-      const { conflicts } = await api.addAssignment(token, {
+      await api.addAssignment(token, {
         subcontractor_id: assignForm.subcontractor_id,
         job_id: drawerContent.id,
         start_date: assignForm.date,
         end_date: assignForm.date
       });
-      if (conflicts.length > 0) {
-        setAssignConflictWarning(
-          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway — review below.`
-        );
-      }
       setAssignForm(EMPTY_ASSIGN_FORM);
       setAssignFormOpen(false);
       await load();
@@ -430,7 +408,6 @@ export default function JobList() {
   }
 
   function openEditAssignment(assignment) {
-    setAssignmentEditWarning(null);
     setAssignmentEditForm({ subcontractor_id: assignment.subcontractor_id, date: assignment.start_date });
     setEditingAssignment(assignment);
   }
@@ -438,22 +415,15 @@ export default function JobList() {
   async function handleSaveAssignmentEdit(e) {
     e.preventDefault();
     setError(null);
-    setAssignmentEditWarning(null);
     setSavingAssignment(true);
     try {
       const token = await getToken();
-      const { conflicts } = await api.updateAssignment(token, editingAssignment.id, {
+      await api.updateAssignment(token, editingAssignment.id, {
         subcontractor_id: assignmentEditForm.subcontractor_id,
         start_date: assignmentEditForm.date,
         end_date: assignmentEditForm.date
       });
-      if (conflicts.length > 0) {
-        setAssignmentEditWarning(
-          `Heads up: this sub already has ${conflicts.length} overlapping assignment(s) in that window. Saved anyway.`
-        );
-      } else {
-        setEditingAssignment(null);
-      }
+      setEditingAssignment(null);
       await load();
     } catch (err) {
       setError(err.message || 'Could not save changes to that assignment.');
@@ -577,11 +547,6 @@ export default function JobList() {
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
-        </MessageBar>
-      )}
-      {createAssignWarning && (
-        <MessageBar intent="warning">
-          <MessageBarBody>{createAssignWarning}</MessageBarBody>
         </MessageBar>
       )}
 
@@ -1162,11 +1127,6 @@ export default function JobList() {
                 {(jobAssignments.length === 0 || assignFormOpen) && (
                   <div style={{ marginTop: 16 }}>
                     <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
-                    {assignConflictWarning && (
-                      <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-                        <MessageBarBody>{assignConflictWarning}</MessageBarBody>
-                      </MessageBar>
-                    )}
                     <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
                       <Field label="Subcontractor" required>
                         <Dropdown
@@ -1350,11 +1310,6 @@ export default function JobList() {
           </DrawerHeaderTitle>
         </DrawerHeader>
         <DrawerBody>
-          {assignmentEditWarning && (
-            <MessageBar intent="warning" style={{ marginBottom: 12 }}>
-              <MessageBarBody>{assignmentEditWarning}</MessageBarBody>
-            </MessageBar>
-          )}
           <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
             <Field label="Subcontractor">
               <Dropdown

@@ -1,6 +1,5 @@
 const express = require('express');
 const db = require('../db/db');
-const { findConflicts } = require('../db/conflicts');
 
 const router = express.Router();
 
@@ -20,8 +19,9 @@ router.get('/', (req, res) => {
   res.json(rows);
 });
 
-// POST /api/assignments — assign a sub to a job. Returns any soft conflicts
-// alongside the created assignment so the UI can flag them.
+// POST /api/assignments — assign a sub to a job. No overlap/conflict check:
+// subs commonly run multiple crews and can legitimately be on two jobs at
+// the same time, so a double-booking isn't actually an error here.
 router.post('/', (req, res) => {
   const { subcontractor_id, job_id, start_date, end_date, notes } = req.body;
 
@@ -30,8 +30,6 @@ router.post('/', (req, res) => {
       error: 'subcontractor_id, job_id, start_date, and end_date are required'
     });
   }
-
-  const conflicts = findConflicts({ subcontractorId: subcontractor_id, jobId: job_id, startDate: start_date, endDate: end_date });
 
   const result = db
     .prepare(
@@ -42,7 +40,7 @@ router.post('/', (req, res) => {
 
   const created = db.prepare('SELECT * FROM assignments WHERE id = ?').get(result.lastInsertRowid);
 
-  res.status(201).json({ assignment: created, conflicts });
+  res.status(201).json({ assignment: created });
 
   // TODO: notify the sub of the new assignment (email/SMS) once a provider is wired up.
 });
@@ -62,24 +60,13 @@ router.put('/:id', (req, res) => {
     notes = existing.notes
   } = req.body;
 
-  // Conflict check runs against whichever sub this assignment now belongs
-  // to — if the sub is being changed, that's the one who actually needs
-  // checking, not the one being replaced.
-  const conflicts = findConflicts({
-    subcontractorId: subcontractor_id,
-    jobId: existing.job_id,
-    startDate: start_date,
-    endDate: end_date,
-    excludeAssignmentId: id
-  });
-
   db.prepare(
     `UPDATE assignments
      SET subcontractor_id = ?, start_date = ?, end_date = ?, status = ?, notes = ?, updated_at = datetime('now')
      WHERE id = ?`
   ).run(subcontractor_id, start_date, end_date, status, notes, id);
 
-  res.json({ assignment: db.prepare('SELECT * FROM assignments WHERE id = ?').get(id), conflicts });
+  res.json({ assignment: db.prepare('SELECT * FROM assignments WHERE id = ?').get(id) });
 });
 
 // DELETE /api/assignments/:id — cancel rather than hard-delete, keeps history intact
