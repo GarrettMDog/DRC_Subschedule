@@ -849,7 +849,7 @@ export default function JobList() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: 12
+                    marginBottom: 8
                   }}
                 >
                   <Button
@@ -857,7 +857,7 @@ export default function JobList() {
                     disabled={weekOffset <= 0}
                     onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
                   >
-                    ← Previous week
+                    ← Prev
                   </Button>
                   <strong>
                     {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
@@ -867,7 +867,7 @@ export default function JobList() {
                     disabled={weekOffset >= 3}
                     onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
                   >
-                    Next week →
+                    Next →
                   </Button>
                 </div>
               )}
@@ -913,14 +913,14 @@ export default function JobList() {
                     {showWeekDivider && (
                       <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0 16px' }} />
                     )}
-                    <div style={{ marginBottom: 20 }}>
+                    <div style={{ marginBottom: 12 }}>
                       <h4
                         ref={(el) => {
                           dateHeaderRefs.current[dateKey] = el;
                         }}
                         style={{
                           margin: 0,
-                          padding: '10px 0',
+                          padding: '6px 0',
                           position: 'sticky',
                           top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
                           zIndex: 5,
@@ -931,7 +931,7 @@ export default function JobList() {
                       >
                         {formatDateHeader(dateKey)}
                       </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
                         {dateGroups[dateKey].map(({ job, subName }) => renderJobRow(job, subName))}
                       </div>
                     </div>

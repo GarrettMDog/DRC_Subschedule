@@ -52,7 +52,7 @@ export default function OfficeLayout({ children }) {
         <header
           ref={headerRef}
           style={{
-            padding: '8px 16px',
+            padding: '6px 16px',
             borderBottom: '1px solid var(--colorNeutralStroke2)',
             position: 'sticky',
             top: 0,
@@ -73,7 +73,7 @@ export default function OfficeLayout({ children }) {
                     <span
                       style={{
                         display: 'inline-block',
-                        padding: '8px 14px',
+                        padding: '6px 10px',
                         borderRadius: 'var(--borderRadiusMedium, 4px)',
                         fontSize: 14,
                         fontWeight: active ? 600 : 400,
