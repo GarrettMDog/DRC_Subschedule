@@ -506,31 +506,31 @@ export default function JobList() {
   const jobTodos = editingJob ? todos.filter((t) => t.job_id === editingJob.id && !t.completed) : [];
 
   function renderJobRow(j, subName) {
-    // "(45 yards @ 10:00 AM, Concrete + Pump)" — yardage and time combined
-    // with @ when both are set; falls back to whichever one is actually
-    // present (no dangling @ with nothing on one side of it) if only one
-    // is set, and drops this part of the parenthetical entirely if neither is.
+    // "45 yards @ 10:00 AM" — yardage and time combined with @ when both are
+    // set; falls back to whichever one is actually present (no dangling @
+    // with nothing on one side of it) if only one is set, and drops this
+    // part of the second line entirely if neither is.
     const yardageTimeParts = [];
     if (j.yardage) yardageTimeParts.push(`${j.yardage} yards`);
     if (j.time) yardageTimeParts.push(formatTime(j.time));
     const yardageTimeText = yardageTimeParts.join(' @ ');
-
-    const parenParts = [];
-    if (yardageTimeText) parenParts.push(yardageTimeText);
-    if (j.materials) parenParts.push(formatMaterials(j.materials));
-    const parenText = parenParts.length > 0 ? ` (${parenParts.join(', ')})` : '';
 
     const orderStatus = materialsOrderStatus(j);
     const orderStatusText = { none: 'Materials pending', partial: 'Some materials ordered', full: 'Materials ordered' }[
       orderStatus
     ];
 
-    // Secondary info (sub name, materials-ordered status) folds into the
-    // same line as the address now rather than a line of its own — this is
-    // what actually buys back the vertical space; a smaller font alone
-    // wasn't enough. Truncates with an ellipsis rather than wrapping, so a
-    // long address + long secondary text still holds the row to one line.
-    const secondaryText = [subName, j.materials ? orderStatusText : null].filter(Boolean).join(' • ');
+    // Line 1 is identity (what/where/who); line 2 is the job-day logistics
+    // (yardage, time, materials, ordered status). Each line truncates on
+    // its own with an ellipsis rather than wrapping, so this never grows
+    // past 2 lines regardless of how long an address or materials list is.
+    // Line 2 is only rendered when there's something to put on it, so a
+    // job with no yardage/time/materials set still shows as 1 line.
+    const line2Parts = [];
+    if (yardageTimeText) line2Parts.push(yardageTimeText);
+    if (j.materials) line2Parts.push(formatMaterials(j.materials));
+    if (j.materials) line2Parts.push(orderStatusText);
+    const line2Text = line2Parts.join(' • ');
 
     return (
       <div
@@ -547,19 +547,23 @@ export default function JobList() {
           />
         )}
         <div className="job-row-text">
-          {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
-          <a
-            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600 }}
-          >
-            {j.address}
-          </a>
-          {parenText}
-          {secondaryText && (
-            <span style={{ color: 'var(--colorNeutralForeground3)', fontWeight: 400 }}> • {secondaryText}</span>
+          <div className="job-row-line">
+            {j.job_type ? `${formatJobType(j.job_type)} — ` : ''}
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(j.address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 600 }}
+            >
+              {j.address}
+            </a>
+            {subName && <span style={{ color: 'var(--colorNeutralForeground3)', fontWeight: 400 }}> • {subName}</span>}
+          </div>
+          {line2Text && (
+            <div className="job-row-line" style={{ color: 'var(--colorNeutralForeground3)' }}>
+              {line2Text}
+            </div>
           )}
         </div>
         <ChevronRight16Regular style={{ flexShrink: 0 }} />

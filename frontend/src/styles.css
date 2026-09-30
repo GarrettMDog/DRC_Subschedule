@@ -215,11 +215,22 @@ body {
    tighter padding above. */
 .job-row-compact {
   gap: 8px;
+  align-items: center;
 }
 
+/* Column wrapper for the (up to) 2 lines of text — identity on line 1,
+   job-day logistics (yardage/time/materials/status) on line 2. Each line
+   truncates independently (see .job-row-line) so this never grows past
+   2 lines no matter how long an address or materials list gets. */
 .job-row-text {
   flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.job-row-line {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
