@@ -490,17 +490,19 @@ export default function JobList() {
       orderStatus
     ];
 
-    // Line 1 is identity (what/where/who); line 2 is the job-day logistics
-    // (yardage, time, materials, ordered status). Each line truncates on
-    // its own with an ellipsis rather than wrapping, so this never grows
-    // past 2 lines regardless of how long an address or materials list is.
-    // Line 2 is only rendered when there's something to put on it, so a
-    // job with no yardage/time/materials set still shows as 1 line.
-    const line2Parts = [];
-    if (yardageTimeText) line2Parts.push(yardageTimeText);
-    if (j.materials) line2Parts.push(formatMaterials(j.materials));
-    if (j.materials) line2Parts.push(orderStatusText);
-    const line2Text = line2Parts.join(' • ');
+    // Line 1 is identity (what/where/who); line 2 is the job-day logistics.
+    // Yardage/time render bold in parentheses, same as before the
+    // single-line change — it's the thing you most want to catch at a
+    // glance. Materials/ordered-status trail after it, muted, same
+    // treatment as the sub name on line 1. Each line truncates on its own
+    // with an ellipsis rather than wrapping, so this never grows past 2
+    // lines regardless of how long an address or materials list is. Line 2
+    // is only rendered when there's something to put on it, so a job with
+    // no yardage/time/materials set still shows as 1 line.
+    const materialsParts = [];
+    if (j.materials) materialsParts.push(formatMaterials(j.materials));
+    if (j.materials) materialsParts.push(orderStatusText);
+    const materialsText = materialsParts.join(' • ');
 
     return (
       <div
@@ -530,9 +532,13 @@ export default function JobList() {
             </a>
             {subName && <span style={{ color: 'var(--colorNeutralForeground3)', fontWeight: 400 }}> • {subName}</span>}
           </div>
-          {line2Text && (
-            <div className="job-row-line" style={{ color: 'var(--colorNeutralForeground3)' }}>
-              {line2Text}
+          {(yardageTimeText || materialsText) && (
+            <div className="job-row-line">
+              {yardageTimeText && <strong>({yardageTimeText})</strong>}
+              {yardageTimeText && materialsText && ' '}
+              {materialsText && (
+                <span style={{ color: 'var(--colorNeutralForeground3)', fontWeight: 400 }}>{materialsText}</span>
+              )}
             </div>
           )}
         </div>
