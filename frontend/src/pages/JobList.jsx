@@ -130,8 +130,12 @@ export default function JobList() {
   // entirely, leaving just a small toggle to bring them back — for
   // maximizing how much of the job list itself is visible on a small
   // screen. Doesn't touch the nav tabs above, which live in the shared
-  // layout and are already fairly compact on their own.
-  const [isMinimized, setIsMinimized] = useState(false);
+  // layout and are already fairly compact on their own. Starts minimized —
+  // the job list itself is the thing people open this page to see; tapping
+  // the + brings back the toolbar AND the nav tabs (tied together via
+  // NavVisibilityContext below) for anyone who needs to search/filter/add
+  // or switch tabs.
+  const [isMinimized, setIsMinimized] = useState(true);
   const { setNavHidden } = useContext(NavVisibilityContext);
 
   // Keeps the shared nav bar in sync with this page's own minimize toggle.
@@ -823,34 +827,36 @@ export default function JobList() {
                 </div>
               )}
 
-              {!isMinimized && (
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 8
-                  }}
+              {/* Always visible, even minimized — this is the one control
+                  people need regardless of whether the toolbar/tabs are
+                  tucked away, since browsing other weeks is the main thing
+                  this page is for. */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 8
+                }}
+              >
+                <Button
+                  appearance="subtle"
+                  disabled={weekOffset <= 0}
+                  onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
                 >
-                  <Button
-                    appearance="subtle"
-                    disabled={weekOffset <= 0}
-                    onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
-                  >
-                    ← Prev
-                  </Button>
-                  <strong>
-                    {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
-                  </strong>
-                  <Button
-                    appearance="subtle"
-                    disabled={weekOffset >= 3}
-                    onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
-                  >
-                    Next →
-                  </Button>
-                </div>
-              )}
+                  ← Prev
+                </Button>
+                <strong>
+                  {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
+                </strong>
+                <Button
+                  appearance="subtle"
+                  disabled={weekOffset >= 3}
+                  onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
+                >
+                  Next →
+                </Button>
+              </div>
               {withinRevealedWeeks.map((dateKey, index) => {
                 const hasJobs = dateGroups[dateKey].length > 0;
                 // A divider between each week — right before a Monday, as
