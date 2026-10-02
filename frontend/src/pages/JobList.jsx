@@ -31,7 +31,7 @@ import { useConfirmDialog } from '../components/useConfirmDialog';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 import LeafIcon from '../components/LeafIcon';
 import { NavVisibilityContext } from '../components/OfficeLayout';
-import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD } from '../dateUtils';
+import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
 import {
   STATUS_HEX,
   materialsOrderedColor,
@@ -194,6 +194,44 @@ export default function JobList() {
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs]);
+
+  // Which date to scroll down to once its week has rendered — set by the
+  // deep-link effect below, consumed by the scroll effect further down.
+  const [scrollToDate, setScrollToDate] = useState(null);
+
+  // Lets the Calendar jump straight to the week containing a specific date
+  // via a link like "/?date=2026-09-18" — same deep-link pattern as
+  // editJobId above, waiting for jobs to load first since the date header
+  // refs this scrolls to don't exist until the list has actually rendered.
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    const targetDate = searchParams.get('date');
+    if (!targetDate) return;
+    setWeekOffset(getWeekOffsetForDate(targetDate));
+    setScrollToDate(targetDate);
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs]);
+
+  // Once the week containing scrollToDate has actually rendered — the
+  // weekOffset change above triggers a re-render that populates
+  // dateHeaderRefs for the newly-revealed week, and refs attach during
+  // render/commit, before effects run — scroll that date's header into
+  // view. Offset by the sticky header + toolbar height so it doesn't end
+  // up hidden underneath them rather than landing right at the top edge.
+  useEffect(() => {
+    if (!scrollToDate) return;
+    const el = dateHeaderRefs.current[scrollToDate];
+    if (!el) return;
+    const headerHeight =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 0;
+    const toolbarHeight =
+      parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--jobs-toolbar-height')) || 0;
+    const offset = headerHeight + toolbarHeight + 8;
+    const top = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top, behavior: 'smooth' });
+    setScrollToDate(null);
+  }, [scrollToDate, weekOffset]);
 
   // The toolbar row (title + search/filter/add buttons) is sticky too now,
   // stacking right below the app's own sticky header. Its height isn't
@@ -777,13 +815,7 @@ export default function JobList() {
           // extend the week to include it, so both days are checked
           // independently rather than assuming Saturday-active implies
           // Sunday-active or vice versa.
-          const todayForWeek = new Date();
-          const todayDayOfWeek = todayForWeek.getDay();
-          const daysUntilFriday = ((5 - todayDayOfWeek) % 7 + 7) % 7;
-          const week0Friday = new Date(todayForWeek);
-          week0Friday.setDate(week0Friday.getDate() + daysUntilFriday);
-          const week0Monday = new Date(week0Friday);
-          week0Monday.setDate(week0Monday.getDate() - 4);
+          const week0Monday = getWeek0Monday();
 
           const weekNMonday = new Date(week0Monday);
           weekNMonday.setDate(weekNMonday.getDate() + weekOffset * 7);
@@ -874,7 +906,15 @@ export default function JobList() {
                   // a handful of empty days before/after the ones that
                   // matter, each taking up as much room as a real one.
                   return (
-                    <div key={dateKey}>
+                    <div
+                      key={dateKey}
+                      ref={(el) => {
+                        // Same ref map as the header below, so a date with
+                        // nothing scheduled is still something the
+                        // Calendar's "jump to this date" link can scroll to.
+                        dateHeaderRefs.current[dateKey] = el;
+                      }}
+                    >
                       {showWeekDivider && (
                         <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0' }} />
                       )}

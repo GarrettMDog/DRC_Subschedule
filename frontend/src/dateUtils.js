@@ -46,6 +46,39 @@ export function toYMD(date) {
 }
 
 /**
+ * The Monday that begins "week 0" — the week containing today, except when
+ * today is itself a weekend, in which case week 0 rolls forward to next
+ * week's Monday. Matches the rule the Jobs list already uses to decide
+ * whether a Saturday/Sunday job belongs to the currently-active work week.
+ * Exported (rather than kept private) so the Jobs list and anything that
+ * needs to compute a weekOffset relative to it — like jumping there from
+ * the Calendar — share one definition instead of two that could drift.
+ */
+export function getWeek0Monday() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysUntilFriday = ((5 - dayOfWeek) % 7 + 7) % 7;
+  const friday = new Date(today);
+  friday.setDate(friday.getDate() + daysUntilFriday);
+  const monday = new Date(friday);
+  monday.setDate(monday.getDate() - 4);
+  return monday;
+}
+
+/**
+ * Given a YYYY-MM-DD date, returns which weekOffset (0 = this week, 1 =
+ * next week, -1 = last week, etc.) that date falls in — the Monday–Sunday
+ * window it belongs to, relative to week 0 above. Used to jump the Jobs
+ * list straight to the week containing a date clicked on the Calendar.
+ */
+export function getWeekOffsetForDate(dateString) {
+  const week0Monday = getWeek0Monday();
+  const target = parseLocalDate(dateString);
+  const diffDays = Math.round((target - week0Monday) / (1000 * 60 * 60 * 24));
+  return Math.floor(diffDays / 7);
+}
+
+/**
  * Formats a SQLite `datetime('now')` timestamp (e.g. "2026-08-28 14:32:10")
  * for display. Different from formatDate/formatDateRange above — those
  * handle plain YYYY-MM-DD dates with no time component and no timezone

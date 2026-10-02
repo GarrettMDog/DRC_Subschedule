@@ -249,6 +249,13 @@ export default function AssignmentCalendar({ assignments }) {
                 className={`calendar-day ${isOutsideMonth ? 'is-outside-month' : ''} ${
                   isToday ? 'is-today' : ''
                 }`}
+                role="button"
+                tabIndex={0}
+                title={`Go to ${ymd} in the Jobs list`}
+                onClick={() => navigate(`/?date=${ymd}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate(`/?date=${ymd}`);
+                }}
               >
                 <div className="calendar-day-number">{day.getDate()}</div>
                 {visible.map((a) => {
@@ -263,12 +270,24 @@ export default function AssignmentCalendar({ assignments }) {
                       className="calendar-pill"
                       style={{ background: materialsOrderedColor(orderStatus) }}
                       title={`${a.subcontractor_name} → ${a.job_address} — materials ${orderStatusLabel}`}
-                      onClick={(e) => openDetail(a, e.currentTarget)}
+                      onClick={(e) => {
+                        // Stops this from also bubbling up to the day cell's
+                        // own click handler — a pill click should open that
+                        // one assignment's detail, not navigate away to the
+                        // Jobs list instead.
+                        e.stopPropagation();
+                        openDetail(a, e.currentTarget);
+                      }}
                     >
                       {a.job_address}
                     </button>
                   );
                 })}
+                {/* Deliberately left clickable via the day cell's own handler
+                    (no separate onClick here) — a busy day's overflow jobs
+                    aren't visible as pills at all, so tapping "+N more"
+                    should do the same thing as tapping anywhere else on the
+                    day: jump to the Jobs list where all of them are visible. */}
                 {extraCount > 0 && <div className="calendar-more">+{extraCount} more</div>}
               </div>
             );

@@ -121,6 +121,11 @@ body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: pointer;
+}
+
+.calendar-day:hover {
+  background: var(--colorNeutralBackground2);
 }
 
 .calendar-day.is-outside-month {
