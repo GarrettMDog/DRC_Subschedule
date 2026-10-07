@@ -4,22 +4,14 @@ import {
   Button,
   Field,
   Input,
-  Textarea,
   Dropdown,
   Option,
   Combobox,
-  Badge,
-  Checkbox,
   MessageBar,
-  MessageBarBody,
-  OverlayDrawer,
-  DrawerBody,
-  DrawerHeader,
-  DrawerHeaderTitle
+  MessageBarBody
 } from '@fluentui/react-components';
 import {
   ChevronRight16Regular,
-  Dismiss24Regular,
   Search20Regular,
   Filter20Regular,
   Add20Regular,
@@ -28,12 +20,13 @@ import {
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { useConfirmDialog } from '../components/useConfirmDialog';
-import AddressAutocomplete from '../components/AddressAutocomplete';
 import LeafIcon from '../components/LeafIcon';
+import AddJobDrawer from '../components/job/AddJobDrawer';
+import EditJobDrawer from '../components/job/EditJobDrawer';
+import EditAssignmentDrawer from '../components/job/EditAssignmentDrawer';
 import { NavVisibilityContext } from '../components/OfficeLayout';
-import { formatDateRange, formatDate, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
+import { formatDateRange, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
 import {
-  STATUS_HEX,
   materialsOrderedColor,
   formatJobType,
   parseJobTypes,
@@ -41,29 +34,6 @@ import {
   parseMaterials,
   materialsOrderStatus
 } from '../theme';
-
-// No more separate "Job name" concept — address is the sole identifier now.
-const EMPTY_FORM = {
-  address: '',
-  job_type: [],
-  time: '',
-  yardage: '',
-  materials: [],
-  ordered_materials: [],
-  notes: '',
-  subcontractor_id: '',
-  date: ''
-};
-const EMPTY_ASSIGN_FORM = { subcontractor_id: '', date: '' };
-const JOB_TYPE_OPTIONS = ['Box', 'Prep', 'Pour', 'Replace', 'Form Wall', 'Dig Ftg', 'Service'];
-const MATERIAL_OPTIONS = ['Concrete', 'Pump', 'Line Pump', 'Gravel', 'Dumptruck', 'Supplies', 'Dump Trailer', 'Georgia Buggy'];
-
-const ASSIGNMENT_STATUS_COLOR = {
-  pending: 'warning',
-  confirmed: 'success',
-  declined: 'danger',
-  cancelled: 'subtle'
-};
 
 export default function JobList() {
   const { getToken } = useApiToken();
@@ -82,32 +52,15 @@ export default function JobList() {
   const [assignments, setAssignments] = useState([]);
   const [todos, setTodos] = useState([]);
   const [subcontractors, setSubcontractors] = useState([]);
-  const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // 'create' shows the add form (small drawer). A job object shows its
   // full-screen edit view. null closes the drawer entirely.
   const [drawerContent, setDrawerContent] = useState(null);
-  const [editForm, setEditForm] = useState(null);
-  const [saving, setSaving] = useState(false);
 
-  // Assigning a subcontractor to this job — moved here from the Dashboard,
-  // so it lives right alongside everything else about the job.
-  const [assignForm, setAssignForm] = useState(EMPTY_ASSIGN_FORM);
-  // Collapsed by default once a job already has a subcontractor assigned —
-  // reset to false (collapsed) each time a different job is opened, since
-  // whether the form should start open depends on that specific job's own
-  // assignment count, checked at render time via jobAssignments.length.
-  const [assignFormOpen, setAssignFormOpen] = useState(false);
-  const [assigning, setAssigning] = useState(false);
-
-  // Editing an existing assignment's dates — this had nowhere to live after
-  // the Dashboard's detail panel was removed. Brought back here since
-  // assignment management now lives entirely on the job itself.
+  // The assignment currently being edited (null = drawer closed).
   const [editingAssignment, setEditingAssignment] = useState(null);
-  const [assignmentEditForm, setAssignmentEditForm] = useState({ subcontractor_id: '', date: '' });
-  const [savingAssignment, setSavingAssignment] = useState(false);
 
   // Search — still useful for narrowing which jobs show up at all, applied
   // before the date/subcontractor grouping below.
@@ -327,70 +280,8 @@ export default function JobList() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  async function handleAdd(e) {
-    e.preventDefault();
-    setError(null);
-
-    if (form.subcontractor_id && !form.date) {
-      setError('Pick a date for the assignment, or clear the subcontractor if you don\'t want to assign one yet.');
-      return;
-    }
-    if (!form.subcontractor_id && form.date) {
-      setError('Pick a subcontractor for that date, or clear the date if you don\'t want to assign one yet.');
-      return;
-    }
-
-    try {
-      const token = await getToken();
-      const newJob = await api.addJob(token, form);
-
-      // Optional — only if a subcontractor was actually picked.
-      if (form.subcontractor_id) {
-        await api.addAssignment(token, {
-          subcontractor_id: form.subcontractor_id,
-          job_id: newJob.id,
-          start_date: form.date,
-          end_date: form.date
-        });
-      }
-
-      setForm(EMPTY_FORM);
-      setDrawerContent(null);
-      await refresh(['jobs', 'assignments']);
-    } catch (err) {
-      setError(err.message || 'Could not add that job.');
-    }
-  }
-
   function openJobDetail(job) {
     setDrawerContent(job);
-    setEditForm({
-      address: job.address || '',
-      time: job.time || '',
-      job_type: parseJobTypes(job.job_type),
-      yardage: job.yardage || '',
-      materials: parseMaterials(job.materials),
-      ordered_materials: parseMaterials(job.ordered_materials),
-      notes: job.notes || ''
-    });
-    setAssignForm(EMPTY_ASSIGN_FORM);
-    setAssignFormOpen(false);
-  }
-
-  async function handleSaveEdit(e) {
-    e.preventDefault();
-    setError(null);
-    setSaving(true);
-    try {
-      const token = await getToken();
-      await api.updateJob(token, drawerContent.id, editForm);
-      await refresh(['jobs', 'assignments']);
-      setDrawerContent(null);
-    } catch (err) {
-      setError(err.message || 'Could not save changes to that job.');
-    } finally {
-      setSaving(false);
-    }
   }
 
   async function handleDeleteJob(job) {
@@ -455,64 +346,8 @@ export default function JobList() {
     }
   }
 
-  async function handleAssignSub(e) {
-    e.preventDefault();
-    setError(null);
-    setAssigning(true);
-    try {
-      const token = await getToken();
-      await api.addAssignment(token, {
-        subcontractor_id: assignForm.subcontractor_id,
-        job_id: drawerContent.id,
-        start_date: assignForm.date,
-        end_date: assignForm.date
-      });
-      setAssignForm(EMPTY_ASSIGN_FORM);
-      setAssignFormOpen(false);
-      await refresh(['assignments']);
-    } catch (err) {
-      setError(err.message || 'Could not assign that subcontractor.');
-    } finally {
-      setAssigning(false);
-    }
-  }
-
   function openEditAssignment(assignment) {
-    setAssignmentEditForm({ subcontractor_id: assignment.subcontractor_id, date: assignment.start_date });
     setEditingAssignment(assignment);
-  }
-
-  async function handleSaveAssignmentEdit(e) {
-    e.preventDefault();
-    setError(null);
-    setSavingAssignment(true);
-    try {
-      const token = await getToken();
-      await api.updateAssignment(token, editingAssignment.id, {
-        subcontractor_id: assignmentEditForm.subcontractor_id,
-        start_date: assignmentEditForm.date,
-        end_date: assignmentEditForm.date
-      });
-      setEditingAssignment(null);
-      await refresh(['assignments']);
-    } catch (err) {
-      setError(err.message || 'Could not save changes to that assignment.');
-    } finally {
-      setSavingAssignment(false);
-    }
-  }
-
-  // Quick-toggle from within the job view, same pattern as materials-ordered
-  // — auto-saves immediately, no separate Save button for just this.
-  async function toggleTodoCompleted(todo) {
-    setError(null);
-    try {
-      const token = await getToken();
-      await api.updateTodo(token, todo.id, { ...todo, completed: !todo.completed });
-      await refresh(['todos']);
-    } catch (err) {
-      setError(err.message || 'Could not update that to-do.');
-    }
   }
 
   const visibleJobs = useMemo(() => {
@@ -1032,430 +867,34 @@ export default function JobList() {
         })()}
       </div>
 
-      {/* Full-screen create view — same field set as editing an existing
-          job, minus the "Assigned subcontractors" and "Open to-dos"
-          sections, since those inherently need a job that already exists. */}
-      <OverlayDrawer
+      <AddJobDrawer
         open={isCreating}
-        onOpenChange={(_, { open }) => !open && setDrawerContent(null)}
-        position="start"
-        size="full"
-      >
-        <DrawerHeader>
-          <DrawerHeaderTitle
-            action={
-              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setDrawerContent(null)} />
-            }
-          >
-            Add a job
-          </DrawerHeaderTitle>
-        </DrawerHeader>
-        <DrawerBody>
-          <div style={{ maxWidth: 700, margin: '0 auto' }}>
-            <form onSubmit={handleAdd} style={{ display: 'grid', gap: 12 }}>
-              <Field label="Address" required>
-                <AddressAutocomplete
-                  value={form.address}
-                  onChange={(newValue) => setForm({ ...form, address: newValue })}
-                />
-              </Field>
+        onClose={() => setDrawerContent(null)}
+        subcontractors={subcontractors}
+        onCreated={() => refresh(['jobs', 'assignments'])}
+        setError={setError}
+      />
 
-              <h4 style={{ marginTop: 12, marginBottom: 0 }}>Assign a subcontractor (optional)</h4>
-              <Field label="Subcontractor">
-                <Dropdown
-                  placeholder="Select a subcontractor"
-                  value={subcontractors.find((s) => s.id === form.subcontractor_id)?.company_name || ''}
-                  onOptionSelect={(_, data) => setForm({ ...form, subcontractor_id: Number(data.optionValue) })}
-                >
-                  {subcontractors.map((s) => (
-                    <Option key={s.id} value={String(s.id)}>
-                      {s.company_name}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-              <Field label="Date">
-                <Input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })}
-                />
-              </Field>
+      <EditJobDrawer
+        job={editingJob}
+        assignments={jobAssignments}
+        todos={jobTodos}
+        subcontractors={subcontractors}
+        onClose={() => setDrawerContent(null)}
+        onChanged={refresh}
+        onEditAssignment={openEditAssignment}
+        onDuplicate={handleDuplicateJob}
+        onDelete={handleDeleteJob}
+        setError={setError}
+      />
 
-              <Field label="Job type" required>
-                <Dropdown
-                  placeholder="Select one or more"
-                  multiselect
-                  value={form.job_type.join(', ')}
-                  selectedOptions={form.job_type}
-                  onOptionSelect={(_, data) => setForm({ ...form, job_type: data.selectedOptions })}
-                >
-                  {JOB_TYPE_OPTIONS.map((t) => (
-                    <Option key={t} value={t}>
-                      {t}
-                    </Option>
-                  ))}
-                </Dropdown>
-              </Field>
-              <Field label="Time">
-                <Input
-                  type="time"
-                  value={form.time}
-                  onChange={(e) => setForm({ ...form, time: e.target.value })}
-                />
-              </Field>
-              <Field label="Yardage">
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={form.yardage}
-                  onChange={(e) => setForm({ ...form, yardage: e.target.value })}
-                />
-              </Field>
-
-              <Field label="Notes">
-                <Textarea
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  resize="vertical"
-                />
-              </Field>
-
-              <Field label="Materials">
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  {MATERIAL_OPTIONS.map((m) => (
-                    <Checkbox
-                      key={m}
-                      label={m}
-                      checked={form.materials.includes(m)}
-                      onChange={(_, data) =>
-                        setForm({
-                          ...form,
-                          materials: data.checked
-                            ? [...form.materials, m]
-                            : form.materials.filter((x) => x !== m),
-                          ordered_materials: data.checked
-                            ? form.ordered_materials
-                            : form.ordered_materials.filter((x) => x !== m)
-                        })
-                      }
-                    />
-                  ))}
-                </div>
-              </Field>
-              {form.materials.length > 0 && (
-                <Field label="Materials ordered">
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {form.materials.map((m) => (
-                      <Checkbox
-                        key={m}
-                        label={m}
-                        checked={form.ordered_materials.includes(m)}
-                        onChange={(_, data) =>
-                          setForm({
-                            ...form,
-                            ordered_materials: data.checked
-                              ? [...form.ordered_materials, m]
-                              : form.ordered_materials.filter((x) => x !== m)
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                </Field>
-              )}
-
-              <Button appearance="primary" type="submit">
-                Add job
-              </Button>
-            </form>
-          </div>
-        </DrawerBody>
-      </OverlayDrawer>
-
-      {/* Full-screen edit view: editable job details, plus everyone assigned to it */}
-      <OverlayDrawer
-        open={editingJob !== null}
-        onOpenChange={(_, { open }) => !open && setDrawerContent(null)}
-        position="start"
-        size="full"
-      >
-        <DrawerHeader>
-          <DrawerHeaderTitle
-            action={
-              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setDrawerContent(null)} />
-            }
-          >
-            {editingJob && (editingJob.job_type ? `${formatJobType(editingJob.job_type)} — ` : '') + (editingJob?.address || '')}
-          </DrawerHeaderTitle>
-        </DrawerHeader>
-        <DrawerBody>
-          {editingJob && editForm && (
-            <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {editingJob.created_by && (
-                <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                  Created by {editingJob.created_by}
-                </div>
-              )}
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <h4 style={{ margin: 0 }}>Assigned subcontractors ({jobAssignments.length})</h4>
-                  {jobAssignments.length > 0 && (
-                    <Button
-                      size="small"
-                      appearance={assignFormOpen ? 'primary' : 'subtle'}
-                      icon={<Add20Regular />}
-                      aria-label="Add another subcontractor"
-                      onClick={() => setAssignFormOpen((open) => !open)}
-                    />
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {jobAssignments.map((a) => (
-                    <div
-                      key={a.id}
-                      className="status-card"
-                      style={{ '--status-color': STATUS_HEX[a.status] || '#6B7280' }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                        <div>
-                          <strong>{a.subcontractor_name}</strong>
-                          <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)', marginTop: 2 }}>
-                            {formatDateRange(a.start_date, a.end_date)}
-                          </div>
-                        </div>
-                        <Button size="small" appearance="secondary" onClick={() => openEditAssignment(a)}>
-                          Edit assignment
-                        </Button>
-                      </div>
-                      {a.status !== 'pending' && (
-                        <Badge color={ASSIGNMENT_STATUS_COLOR[a.status] || 'informative'} style={{ marginTop: 6 }}>
-                          {a.status}
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                  {jobAssignments.length === 0 && <p>No subcontractors assigned to this job yet.</p>}
-                </div>
-
-                {(jobAssignments.length === 0 || assignFormOpen) && (
-                  <div style={{ marginTop: 16 }}>
-                    <h4 style={{ marginBottom: 12 }}>Assign a subcontractor</h4>
-                    <form onSubmit={handleAssignSub} style={{ display: 'grid', gap: 12, maxWidth: 360 }}>
-                      <Field label="Subcontractor" required>
-                        <Dropdown
-                          placeholder="Select a subcontractor"
-                          value={
-                            subcontractors.find((s) => s.id === assignForm.subcontractor_id)?.company_name || ''
-                          }
-                          onOptionSelect={(_, data) =>
-                            setAssignForm({ ...assignForm, subcontractor_id: Number(data.optionValue) })
-                          }
-                        >
-                          {subcontractors.map((s) => (
-                            <Option key={s.id} value={String(s.id)}>
-                              {s.company_name}
-                            </Option>
-                          ))}
-                        </Dropdown>
-                      </Field>
-                      <Field label="Date" required>
-                        <Input
-                        type="date"
-                        value={assignForm.date}
-                        onChange={(e) => setAssignForm({ ...assignForm, date: e.target.value })}
-                      />
-                    </Field>
-                    <Button appearance="primary" type="submit" disabled={assigning}>
-                      {assigning ? 'Assigning…' : 'Assign'}
-                    </Button>
-                  </form>
-                  </div>
-                )}
-              </div>
-
-              <form onSubmit={handleSaveEdit} style={{ display: 'grid', gap: 12 }}>
-                <Field label="Address" required>
-                  <AddressAutocomplete
-                    value={editForm.address}
-                    onChange={(newValue) => setEditForm({ ...editForm, address: newValue })}
-                  />
-                </Field>
-                <Field label="Job type" required>
-                  <Dropdown
-                    placeholder="Select one or more"
-                    multiselect
-                    value={editForm.job_type.join(', ')}
-                    selectedOptions={editForm.job_type}
-                    onOptionSelect={(_, data) => setEditForm({ ...editForm, job_type: data.selectedOptions })}
-                  >
-                    {JOB_TYPE_OPTIONS.map((t) => (
-                      <Option key={t} value={t}>
-                        {t}
-                      </Option>
-                    ))}
-                  </Dropdown>
-                </Field>
-                <Field label="Time">
-                  <Input
-                    type="time"
-                    value={editForm.time}
-                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
-                  />
-                </Field>
-                <Field label="Yardage">
-                  <Input
-                    type="number"
-                    step="0.5"
-                    value={editForm.yardage}
-                    onChange={(e) => setEditForm({ ...editForm, yardage: e.target.value })}
-                  />
-                </Field>
-                <Field label="Notes">
-                  <Textarea
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                    resize="vertical"
-                  />
-                </Field>
-                <Field label="Materials">
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {MATERIAL_OPTIONS.map((m) => (
-                      <Checkbox
-                        key={m}
-                        label={m}
-                        checked={editForm.materials.includes(m)}
-                        onChange={(_, data) =>
-                          setEditForm({
-                            ...editForm,
-                            materials: data.checked
-                              ? [...editForm.materials, m]
-                              : editForm.materials.filter((x) => x !== m),
-                            // Unchecking a material also clears its ordered
-                            // status — no point keeping a stale "ordered"
-                            // flag for something the job no longer needs.
-                            ordered_materials: data.checked
-                              ? editForm.ordered_materials
-                              : editForm.ordered_materials.filter((x) => x !== m)
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                </Field>
-                {editForm.materials.length > 0 && (
-                  <Field label="Materials ordered">
-                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                      {editForm.materials.map((m) => (
-                        <Checkbox
-                          key={m}
-                          label={m}
-                          checked={editForm.ordered_materials.includes(m)}
-                          onChange={(_, data) =>
-                            setEditForm({
-                              ...editForm,
-                              ordered_materials: data.checked
-                                ? [...editForm.ordered_materials, m]
-                                : editForm.ordered_materials.filter((x) => x !== m)
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
-                  </Field>
-                )}
-                <Button appearance="primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save changes'}
-                </Button>
-              </form>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <Button appearance="secondary" onClick={() => handleDuplicateJob(editingJob)}>
-                  Duplicate this job
-                </Button>
-                <Button appearance="secondary" onClick={() => handleDeleteJob(editingJob)}>
-                  Delete this job
-                </Button>
-              </div>
-
-              <div>
-                <h4 style={{ marginBottom: 12 }}>
-                  Open to-dos on this job ({jobTodos.length})
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {jobTodos.map((t) => (
-                    <div
-                      key={t.id}
-                      className="status-card"
-                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}
-                    >
-                      <Checkbox checked={false} onChange={() => toggleTodoCompleted(t)} style={{ marginTop: 2 }} />
-                      <div>
-                        <strong>{t.title}</strong>
-                        <div style={{ fontSize: 12, color: 'var(--colorNeutralForeground3)' }}>
-                          {t.assignee_name || 'Unassigned'}
-                          {t.due_date && ` · Due ${formatDate(t.due_date)}`}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  {jobTodos.length === 0 && <p>No open to-dos on this job.</p>}
-                </div>
-              </div>
-            </div>
-          )}
-        </DrawerBody>
-      </OverlayDrawer>
-
-      {/* Edit an existing assignment — who's assigned, or when */}
-      <OverlayDrawer
-        open={editingAssignment !== null}
-        onOpenChange={(_, { open }) => !open && setEditingAssignment(null)}
-        position="start"
-        size="small"
-      >
-        <DrawerHeader>
-          <DrawerHeaderTitle
-            action={
-              <Button appearance="subtle" icon={<Dismiss24Regular />} onClick={() => setEditingAssignment(null)} />
-            }
-          >
-            Edit assignment
-          </DrawerHeaderTitle>
-        </DrawerHeader>
-        <DrawerBody>
-          <form onSubmit={handleSaveAssignmentEdit} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Subcontractor">
-              <Dropdown
-                placeholder="Select a subcontractor"
-                value={
-                  subcontractors.find((s) => s.id === assignmentEditForm.subcontractor_id)?.company_name || ''
-                }
-                onOptionSelect={(_, data) =>
-                  setAssignmentEditForm({ ...assignmentEditForm, subcontractor_id: Number(data.optionValue) })
-                }
-              >
-                {subcontractors.map((s) => (
-                  <Option key={s.id} value={String(s.id)}>
-                    {s.company_name}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
-            <Field label="Date">
-              <Input
-                type="date"
-                value={assignmentEditForm.date}
-                onChange={(e) => setAssignmentEditForm({ ...assignmentEditForm, date: e.target.value })}
-              />
-            </Field>
-            <Button appearance="primary" type="submit" disabled={savingAssignment}>
-              {savingAssignment ? 'Saving…' : 'Save changes'}
-            </Button>
-          </form>
-        </DrawerBody>
-      </OverlayDrawer>
+      <EditAssignmentDrawer
+        assignment={editingAssignment}
+        onClose={() => setEditingAssignment(null)}
+        subcontractors={subcontractors}
+        onSaved={() => refresh(['assignments'])}
+        setError={setError}
+      />
     </div>
   );
 }
