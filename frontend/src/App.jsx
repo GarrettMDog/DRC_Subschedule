@@ -9,6 +9,7 @@ const OfficeDashboard = lazy(() => import('./pages/OfficeDashboard'));
 const SubcontractorDirectory = lazy(() => import('./pages/SubcontractorDirectory'));
 const JobList = lazy(() => import('./pages/JobList'));
 const Services = lazy(() => import('./pages/Services'));
+const Estimating = lazy(() => import('./pages/Estimating'));
 const SubSchedule = lazy(() => import('./pages/SubSchedule'));
 
 function SignInGate() {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/calendar" element={<OfficeDashboard />} />
         <Route path="/subcontractors" element={<SubcontractorDirectory />} />
         <Route path="/services" element={<Services />} />
+        <Route path="/estimating" element={<Estimating />} />
       </Routes>
       </Suspense>
     </OfficeLayout>

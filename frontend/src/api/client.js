@@ -45,7 +45,12 @@ export const api = {
   getTodos: (token, { open } = {}) => request(`/api/todos${open ? '?open=1' : ''}`, { token }),
   addTodo: (token, data) => request('/api/todos', { method: 'POST', body: data, token }),
   updateTodo: (token, id, data) => request(`/api/todos/${id}`, { method: 'PUT', body: data, token }),
-  deleteTodo: (token, id) => request(`/api/todos/${id}`, { method: 'DELETE', token })
+  deleteTodo: (token, id) => request(`/api/todos/${id}`, { method: 'DELETE', token }),
+
+  getEstimates: (token) => request('/api/estimates', { token }),
+  addEstimate: (token, data) => request('/api/estimates', { method: 'POST', body: data, token }),
+  updateEstimate: (token, id, data) => request(`/api/estimates/${id}`, { method: 'PUT', body: data, token }),
+  deleteEstimate: (token, id) => request(`/api/estimates/${id}`, { method: 'DELETE', token })
 };
 
 // --- Sub-facing calls (no MSAL token — gated by their link token in the URL) ---
