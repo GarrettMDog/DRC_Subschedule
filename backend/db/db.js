@@ -79,12 +79,11 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  -- Estimating team's simple to-do list: one row per project to be estimated.
+  -- Estimating team's simple to-do list: one row per address to be estimated.
   CREATE TABLE IF NOT EXISTS estimates (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     date_received TEXT NOT NULL,
-    project_name TEXT NOT NULL,
-    address TEXT,
+    address TEXT NOT NULL,
     contact TEXT,
     priority TEXT NOT NULL DEFAULT 'Medium',
     created_by TEXT,
@@ -156,6 +155,17 @@ if (!hasOrderedMaterials) {
 const hasNotes = jobColumns.some((col) => col.name === 'notes');
 if (!hasNotes) {
   db.exec('ALTER TABLE jobs ADD COLUMN notes TEXT');
+}
+
+// Estimates originally had a project_name column; the address is now the
+// only identifier. Keep any existing rows usable: fall back to the old
+// project name where an address was never entered, then drop the column.
+const estimateColumns = db.prepare('PRAGMA table_info(estimates)').all();
+if (estimateColumns.some((col) => col.name === 'project_name')) {
+  db.exec(`
+    UPDATE estimates SET address = project_name WHERE address IS NULL OR TRIM(address) = '';
+    ALTER TABLE estimates DROP COLUMN project_name;
+  `);
 }
 
 module.exports = db;

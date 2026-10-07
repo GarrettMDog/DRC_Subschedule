@@ -24,13 +24,13 @@ import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDate, toYMD } from '../dateUtils';
 import { useConfirmDialog } from '../components/useConfirmDialog';
+import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
 const PRIORITY_COLOR = { High: 'danger', Medium: 'warning', Low: 'informative' };
 
 const emptyForm = () => ({
   date_received: toYMD(new Date()),
-  project_name: '',
   address: '',
   contact: '',
   priority: 'Medium'
@@ -73,7 +73,6 @@ export default function Estimating() {
   function openEdit(row) {
     setForm({
       date_received: row.date_received,
-      project_name: row.project_name,
       address: row.address || '',
       contact: row.contact || '',
       priority: row.priority
@@ -102,7 +101,7 @@ export default function Estimating() {
   }
 
   async function handleDelete(row) {
-    const confirmed = await confirm(`Remove "${row.project_name}" from the estimating list?`);
+    const confirmed = await confirm(`Remove "${row.address}" from the estimating list?`);
     if (!confirmed) return;
     setError(null);
     try {
@@ -137,14 +136,13 @@ export default function Estimating() {
       </div>
 
       {rows.length === 0 ? (
-        <p>Nothing on the estimating list. Click "Add" to put a project on it.</p>
+        <p>Nothing on the estimating list. Click "Add" to add an address to it.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <Table aria-label="Estimating list" style={{ minWidth: 640 }}>
+          <Table aria-label="Estimating list" style={{ minWidth: 560 }}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>Date Received</TableHeaderCell>
-                <TableHeaderCell>Project Name</TableHeaderCell>
                 <TableHeaderCell>Address</TableHeaderCell>
                 <TableHeaderCell>Contact</TableHeaderCell>
                 <TableHeaderCell>Priority</TableHeaderCell>
@@ -155,9 +153,8 @@ export default function Estimating() {
                 <TableRow key={r.id} onClick={() => openEdit(r)} style={{ cursor: 'pointer' }}>
                   <TableCell>{formatDate(r.date_received)}</TableCell>
                   <TableCell>
-                    <strong>{r.project_name}</strong>
+                    <strong>{r.address}</strong>
                   </TableCell>
-                  <TableCell>{r.address}</TableCell>
                   <TableCell>{r.contact}</TableCell>
                   <TableCell>
                     <Badge color={PRIORITY_COLOR[r.priority] || 'informative'}>{r.priority}</Badge>
@@ -192,15 +189,12 @@ export default function Estimating() {
                 onChange={(e) => setForm({ ...form, date_received: e.target.value })}
               />
             </Field>
-            <Field label="Project name" required>
-              <Input
+            <Field label="Address" required>
+              <AddressAutocomplete
                 required
-                value={form.project_name}
-                onChange={(e) => setForm({ ...form, project_name: e.target.value })}
+                value={form.address}
+                onChange={(newValue) => setForm({ ...form, address: newValue })}
               />
-            </Field>
-            <Field label="Address">
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             </Field>
             <Field label="Contact">
               <Input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />

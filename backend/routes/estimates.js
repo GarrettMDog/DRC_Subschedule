@@ -19,10 +19,10 @@ router.get('/', (req, res) => {
 
 // POST /api/estimates
 router.post('/', (req, res) => {
-  const { date_received, project_name, address, contact, priority = 'Medium' } = req.body;
+  const { date_received, address, contact, priority = 'Medium' } = req.body;
 
-  if (!date_received || !project_name) {
-    return res.status(400).json({ error: 'date_received and project_name are required' });
+  if (!date_received || !address?.trim()) {
+    return res.status(400).json({ error: 'date_received and address are required' });
   }
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
@@ -31,10 +31,10 @@ router.post('/', (req, res) => {
   const createdBy = req.user?.name || req.user?.email || null;
   const result = db
     .prepare(
-      `INSERT INTO estimates (date_received, project_name, address, contact, priority, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO estimates (date_received, address, contact, priority, created_by)
+       VALUES (?, ?, ?, ?, ?)`
     )
-    .run(date_received, project_name, address || null, contact || null, priority, createdBy);
+    .run(date_received, address.trim(), contact || null, priority, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -47,14 +47,13 @@ router.put('/:id', (req, res) => {
 
   const {
     date_received = existing.date_received,
-    project_name = existing.project_name,
     address = existing.address,
     contact = existing.contact,
     priority = existing.priority
   } = req.body;
 
-  if (!date_received || !project_name) {
-    return res.status(400).json({ error: 'date_received and project_name are required' });
+  if (!date_received || !address?.trim()) {
+    return res.status(400).json({ error: 'date_received and address are required' });
   }
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
@@ -62,9 +61,9 @@ router.put('/:id', (req, res) => {
 
   db.prepare(
     `UPDATE estimates
-     SET date_received = ?, project_name = ?, address = ?, contact = ?, priority = ?, updated_at = datetime('now')
+     SET date_received = ?, address = ?, contact = ?, priority = ?, updated_at = datetime('now')
      WHERE id = ?`
-  ).run(date_received, project_name, address || null, contact || null, priority, id);
+  ).run(date_received, address.trim(), contact || null, priority, id);
 
   res.json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(id));
 });
