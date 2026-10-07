@@ -154,26 +154,29 @@ export default function JobList() {
   const [subFilterText, setSubFilterText] = useState('');
   const [createdByFilter, setCreatedByFilter] = useState(null); // null = show everyone
 
-  async function load() {
+  // Loads everything on first render. After a mutation, call refresh() with
+  // only the resources that actually changed instead of refetching all four.
+  // Todos are fetched open-only (?open=1) — this page never shows completed ones.
+  const FETCHERS = {
+    jobs: (token) => api.getJobs(token).then(setJobs),
+    assignments: (token) => api.getAssignments(token).then(setAssignments),
+    todos: (token) => api.getTodos(token, { open: true }).then(setTodos),
+    subcontractors: (token) => api.getSubcontractors(token).then(setSubcontractors)
+  };
+
+  async function refresh(keys = Object.keys(FETCHERS)) {
     try {
       setError(null);
       const token = await getToken();
-      const [jobsData, assignmentsData, todosData, subsData] = await Promise.all([
-        api.getJobs(token),
-        api.getAssignments(token),
-        api.getTodos(token),
-        api.getSubcontractors(token)
-      ]);
-      setJobs(jobsData);
-      setAssignments(assignmentsData);
-      setTodos(todosData);
-      setSubcontractors(subsData);
+      await Promise.all(keys.map((k) => FETCHERS[k](token)));
     } catch (err) {
       setError(err.message || 'Something went wrong loading the job list.');
     } finally {
       setLoading(false);
     }
   }
+
+  const load = () => refresh();
 
   useEffect(() => {
     load();
@@ -353,7 +356,7 @@ export default function JobList() {
 
       setForm(EMPTY_FORM);
       setDrawerContent(null);
-      await load();
+      await refresh(['jobs', 'assignments']);
     } catch (err) {
       setError(err.message || 'Could not add that job.');
     }
@@ -381,7 +384,7 @@ export default function JobList() {
     try {
       const token = await getToken();
       await api.updateJob(token, drawerContent.id, editForm);
-      await load();
+      await refresh(['jobs', 'assignments']);
       setDrawerContent(null);
     } catch (err) {
       setError(err.message || 'Could not save changes to that job.');
@@ -400,7 +403,7 @@ export default function JobList() {
       const token = await getToken();
       await api.deleteJob(token, job.id);
       setDrawerContent(null);
-      await load();
+      await refresh(['jobs', 'assignments', 'todos']);
     } catch (err) {
       setError(err.message || 'Could not delete that job.');
     }
@@ -445,7 +448,7 @@ export default function JobList() {
         });
       }
 
-      await load();
+      await refresh(['jobs', 'assignments']);
       openJobDetail(newJob);
     } catch (err) {
       setError(err.message || 'Could not duplicate that job.');
@@ -466,7 +469,7 @@ export default function JobList() {
       });
       setAssignForm(EMPTY_ASSIGN_FORM);
       setAssignFormOpen(false);
-      await load();
+      await refresh(['assignments']);
     } catch (err) {
       setError(err.message || 'Could not assign that subcontractor.');
     } finally {
@@ -491,7 +494,7 @@ export default function JobList() {
         end_date: assignmentEditForm.date
       });
       setEditingAssignment(null);
-      await load();
+      await refresh(['assignments']);
     } catch (err) {
       setError(err.message || 'Could not save changes to that assignment.');
     } finally {
@@ -506,7 +509,7 @@ export default function JobList() {
     try {
       const token = await getToken();
       await api.updateTodo(token, todo.id, { ...todo, completed: !todo.completed });
-      await load();
+      await refresh(['todos']);
     } catch (err) {
       setError(err.message || 'Could not update that to-do.');
     }

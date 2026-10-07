@@ -83,6 +83,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_assignments_job ON assignments(job_id);
   CREATE INDEX IF NOT EXISTS idx_todos_assignee ON todos(assignee_id);
   CREATE INDEX IF NOT EXISTS idx_todos_job ON todos(job_id);
+  CREATE INDEX IF NOT EXISTS idx_assignments_sub_end ON assignments(subcontractor_id, end_date);
+  CREATE INDEX IF NOT EXISTS idx_assignments_end ON assignments(end_date);
+  CREATE INDEX IF NOT EXISTS idx_todos_completed_due ON todos(completed, due_date);
 `);
 
 // Safe migration: adds materials_ordered to any database that already
