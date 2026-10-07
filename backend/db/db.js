@@ -79,6 +79,19 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  -- Estimating team's simple to-do list: one row per project to be estimated.
+  CREATE TABLE IF NOT EXISTS estimates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date_received TEXT NOT NULL,
+    project_name TEXT NOT NULL,
+    address TEXT,
+    contact TEXT,
+    priority TEXT NOT NULL DEFAULT 'Medium',
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
   CREATE INDEX IF NOT EXISTS idx_assignments_sub ON assignments(subcontractor_id);
   CREATE INDEX IF NOT EXISTS idx_assignments_job ON assignments(job_id);
   CREATE INDEX IF NOT EXISTS idx_todos_assignee ON todos(assignee_id);

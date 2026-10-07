@@ -9,6 +9,7 @@ const assignmentsRouter = require('./routes/assignments');
 const myScheduleRouter = require('./routes/mySchedule');
 const serviceAssigneesRouter = require('./routes/serviceAssignees');
 const todosRouter = require('./routes/todos');
+const estimatesRouter = require('./routes/estimates');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -35,6 +36,7 @@ app.use('/api/jobs', requireOfficeAuth, jobsRouter);
 app.use('/api/assignments', requireOfficeAuth, assignmentsRouter);
 app.use('/api/service-assignees', requireOfficeAuth, serviceAssigneesRouter);
 app.use('/api/todos', requireOfficeAuth, todosRouter);
+app.use('/api/estimates', requireOfficeAuth, estimatesRouter);
 
 // --- Sub-facing routes: passwordless, gated by their unique link token ---
 app.use('/api/my-schedule/:token', myScheduleRouter);
