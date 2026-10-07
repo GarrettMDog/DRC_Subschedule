@@ -1,14 +1,15 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AuthenticatedTemplate, UnauthenticatedTemplate, useMsal } from '@azure/msal-react';
 import { Button, Spinner } from '@fluentui/react-components';
 import { loginRequest } from './auth/msalConfig';
 import { useIsTeams } from './auth/TeamsContext';
 import OfficeLayout from './components/OfficeLayout';
-import OfficeDashboard from './pages/OfficeDashboard';
-import SubcontractorDirectory from './pages/SubcontractorDirectory';
-import JobList from './pages/JobList';
-import Services from './pages/Services';
-import SubSchedule from './pages/SubSchedule';
+const OfficeDashboard = lazy(() => import('./pages/OfficeDashboard'));
+const SubcontractorDirectory = lazy(() => import('./pages/SubcontractorDirectory'));
+const JobList = lazy(() => import('./pages/JobList'));
+const Services = lazy(() => import('./pages/Services'));
+const SubSchedule = lazy(() => import('./pages/SubSchedule'));
 
 function SignInGate() {
   const { instance } = useMsal();
@@ -27,16 +28,19 @@ export default function App() {
 
   const officeRoutes = (
     <OfficeLayout>
+      <Suspense fallback={<Spinner />}>
       <Routes>
         <Route path="/" element={<JobList />} />
         <Route path="/calendar" element={<OfficeDashboard />} />
         <Route path="/subcontractors" element={<SubcontractorDirectory />} />
         <Route path="/services" element={<Services />} />
       </Routes>
+      </Suspense>
     </OfficeLayout>
   );
 
   return (
+    <Suspense fallback={<Spinner />}>
     <Routes>
       {/* Public: subcontractors open this from an emailed/texted link, no login */}
       <Route path="/my-schedule/:linkToken" element={<SubSchedule />} />
@@ -62,5 +66,6 @@ export default function App() {
         }
       />
     </Routes>
+    </Suspense>
   );
 }

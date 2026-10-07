@@ -535,11 +535,22 @@ export default function JobList() {
     [jobs]
   );
 
+  // Assignments indexed by job once per data change, instead of a full
+  // assignments.filter() per job on every render.
+  const assignmentsByJob = useMemo(() => {
+    const map = new Map();
+    for (const a of assignments) {
+      if (!map.has(a.job_id)) map.set(a.job_id, []);
+      map.get(a.job_id).push(a);
+    }
+    return map;
+  }, [assignments]);
+
   if (loading) return <p>Loading…</p>;
 
   const isCreating = drawerContent === 'create';
   const editingJob = drawerContent && drawerContent !== 'create' ? drawerContent : null;
-  const jobAssignments = editingJob ? assignments.filter((a) => a.job_id === editingJob.id) : [];
+  const jobAssignments = editingJob ? assignmentsByJob.get(editingJob.id) || [] : [];
   // Driven only by job_id and the to-do's own completed flag — never by the
   // job's status, so a to-do on a "Completed" job still shows until it's
   // checked off itself.
@@ -751,8 +762,8 @@ export default function JobList() {
           // can have more than one.
           const jobsWithAssignments = visibleJobs.map((j) => ({
             job: j,
-            activeAssignments: assignments.filter(
-              (a) => a.job_id === j.id && a.status !== 'cancelled' && a.status !== 'declined'
+            activeAssignments: (assignmentsByJob.get(j.id) || []).filter(
+              (a) => a.status !== 'cancelled' && a.status !== 'declined'
             )
           }));
 
