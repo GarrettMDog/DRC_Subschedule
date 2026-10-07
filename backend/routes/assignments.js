@@ -3,8 +3,10 @@ const db = require('../db/db');
 
 const router = express.Router();
 
-// GET /api/assignments — everything, joined with sub + job names, for the dashboard/calendar
+// GET /api/assignments — everything, joined with sub + job names, for the dashboard/calendar.
+// Optional ?from=YYYY-MM-DD limits to assignments ending on/after that date.
 router.get('/', (req, res) => {
+  const from = /^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '') ? req.query.from : null;
   const rows = db
     .prepare(
       `SELECT a.*, s.company_name AS subcontractor_name, j.name AS job_name, j.address AS job_address,
@@ -13,9 +15,10 @@ router.get('/', (req, res) => {
        FROM assignments a
        JOIN subcontractors s ON s.id = a.subcontractor_id
        JOIN jobs j ON j.id = a.job_id
+       WHERE (? IS NULL OR a.end_date >= ?)
        ORDER BY a.start_date, CASE WHEN j.time IS NULL THEN 1 ELSE 0 END, j.time`
     )
-    .all();
+    .all(from, from);
   res.json(rows);
 });
 

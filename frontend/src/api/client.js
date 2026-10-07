@@ -42,7 +42,7 @@ export const api = {
     request(`/api/service-assignees/${id}`, { method: 'PUT', body: data, token }),
   deleteServiceAssignee: (token, id) => request(`/api/service-assignees/${id}`, { method: 'DELETE', token }),
 
-  getTodos: (token) => request('/api/todos', { token }),
+  getTodos: (token, { open } = {}) => request(`/api/todos${open ? '?open=1' : ''}`, { token }),
   addTodo: (token, data) => request('/api/todos', { method: 'POST', body: data, token }),
   updateTodo: (token, id, data) => request(`/api/todos/${id}`, { method: 'PUT', body: data, token }),
   deleteTodo: (token, id) => request(`/api/todos/${id}`, { method: 'DELETE', token })

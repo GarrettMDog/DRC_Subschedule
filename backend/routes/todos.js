@@ -5,14 +5,16 @@ const router = express.Router();
 
 // GET /api/todos — open items first, then by due date, joined with names so
 // the frontend doesn't need a separate lookup to display who/what a to-do
-// is attached to.
+// is attached to. ?open=1 returns only incomplete to-dos.
 router.get('/', (req, res) => {
+  const where = req.query.open === '1' ? 'WHERE t.completed = 0' : '';
   const rows = db
     .prepare(
       `SELECT t.*, sa.name AS assignee_name, j.address AS job_address
        FROM todos t
        LEFT JOIN service_assignees sa ON sa.id = t.assignee_id
        LEFT JOIN jobs j ON j.id = t.job_id
+       ${where}
        ORDER BY t.completed ASC, COALESCE(t.due_date, '9999-99-99') ASC, t.created_at ASC`
     )
     .all();
