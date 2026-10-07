@@ -199,16 +199,41 @@ export default function JobList() {
   // deep-link effect below, consumed by the scroll effect further down.
   const [scrollToDate, setScrollToDate] = useState(null);
 
+  // Default view is today-forward only — a completed job drops off the
+  // list, by design. This lifts that restriction, but only for the one
+  // view landed on via a past-date Calendar link; it is NOT a general
+  // "browse history" toggle (that's a separate, not-yet-decided feature).
+  // Manually paging with Prev/Next resets it back off, so the relaxed
+  // filter doesn't quietly leak into ordinary forward browsing afterward.
+  const [includePastJobs, setIncludePastJobs] = useState(false);
+
+  // The exact date a Calendar link pointed at — unlike scrollToDate (which
+  // clears itself right after the one-time scroll), this sticks around for
+  // as long as that linked view is up. It's what keeps that specific date
+  // guaranteed-visible (even an empty weekend day) across re-renders after
+  // the scroll happens, not just in the single render that triggers it —
+  // otherwise the row the person just scrolled to could vanish out from
+  // under them the instant scrollToDate resets to null. Reset alongside
+  // includePastJobs on manual Prev/Next, same reasoning as that flag.
+  const [linkedDate, setLinkedDate] = useState(null);
+
   // Lets the Calendar jump straight to the week containing a specific date
   // via a link like "/?date=2026-09-18" — same deep-link pattern as
   // editJobId above, waiting for jobs to load first since the date header
   // refs this scrolls to don't exist until the list has actually rendered.
+  // If that date is itself in the past, also lifts the active-jobs-only
+  // filter just for this view — otherwise a past date would compute a
+  // valid week and still show nothing on it, same gap that prompted this.
   useEffect(() => {
     if (jobs.length === 0) return;
     const targetDate = searchParams.get('date');
     if (!targetDate) return;
     setWeekOffset(getWeekOffsetForDate(targetDate));
     setScrollToDate(targetDate);
+    setLinkedDate(targetDate);
+    if (targetDate < toYMD(new Date())) {
+      setIncludePastJobs(true);
+    }
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobs]);
@@ -773,13 +798,22 @@ export default function JobList() {
 
           for (const { job, activeAssignments } of filtered) {
             for (const a of activeAssignments) {
-              if (a.end_date < todayYMD) continue;
+              if (!includePastJobs && a.end_date < todayYMD) continue;
               if (subFilterId !== null && a.subcontractor_id !== subFilterId) continue;
               const date = a.start_date;
               if (!dateGroups[date]) dateGroups[date] = [];
               dateGroups[date].push({ job, subName: a.subcontractor_name });
             }
           }
+
+          // Guarantees a row exists for the exact date a past-date Calendar
+          // link is pointed at, even if it turns out to have zero jobs on
+          // it — otherwise there'd be nothing for the scroll effect above
+          // to find, same gap as a day that was never pre-seeded.
+          if (linkedDate && !dateGroups[linkedDate]) {
+            dateGroups[linkedDate] = [];
+          }
+
           const dateKeys = Object.keys(dateGroups).sort();
 
           // Within a day, order by subcontractor first — alphabetically —
@@ -837,8 +871,12 @@ export default function JobList() {
 
           // Hide an empty Saturday/Sunday entirely rather than even showing
           // the compact "no jobs" row — a weekend only earns a spot in the
-          // list once something's actually scheduled on it.
+          // list once something's actually scheduled on it. Exception: the
+          // exact date a Calendar link pointed at always gets shown, even
+          // an empty weekend day — there has to be something there to
+          // scroll to, or the link just silently does nothing.
           const visibleDateKeys = dateKeys.filter((dateKey) => {
+            if (dateKey === linkedDate) return true;
             const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
             return !isWeekend || dateGroups[dateKey].length > 0;
@@ -874,7 +912,14 @@ export default function JobList() {
                 <Button
                   appearance="subtle"
                   disabled={weekOffset <= 0}
-                  onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
+                  onClick={() => {
+                    // Manually paging away is what scopes the past-date
+                    // link's relaxed filter back down to "just that one
+                    // view" — see the comments on includePastJobs/linkedDate.
+                    setIncludePastJobs(false);
+                    setLinkedDate(null);
+                    setWeekOffset((w) => Math.max(0, w - 1));
+                  }}
                 >
                   ← Prev
                 </Button>
@@ -884,7 +929,11 @@ export default function JobList() {
                 <Button
                   appearance="subtle"
                   disabled={weekOffset >= 3}
-                  onClick={() => setWeekOffset((w) => Math.min(3, w + 1))}
+                  onClick={() => {
+                    setIncludePastJobs(false);
+                    setLinkedDate(null);
+                    setWeekOffset((w) => Math.min(3, w + 1));
+                  }}
                 >
                   Next →
                 </Button>
