@@ -50,7 +50,8 @@ export default function EditJobDrawer({
   onEditAssignment,
   onDuplicate,
   onDelete,
-  setError
+  setError,
+  children
 }) {
   const { getToken } = useApiToken();
   const [editForm, setEditForm] = useState(null);
@@ -264,6 +265,7 @@ export default function EditJobDrawer({
             </div>
           </div>
         )}
+        {children}
       </DrawerBody>
     </OverlayDrawer>
   );
