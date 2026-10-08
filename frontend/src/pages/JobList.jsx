@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
   Field,
@@ -14,8 +14,7 @@ import {
   ChevronRight16Regular,
   Search20Regular,
   Filter20Regular,
-  Add20Regular,
-  Subtract20Regular
+  Add20Regular
 } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
@@ -24,7 +23,6 @@ import LeafIcon from '../components/LeafIcon';
 import AddJobDrawer from '../components/job/AddJobDrawer';
 import EditJobDrawer from '../components/job/EditJobDrawer';
 import EditAssignmentDrawer from '../components/job/EditAssignmentDrawer';
-import { NavVisibilityContext } from '../components/OfficeLayout';
 import { formatDateRange, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
 import {
   materialsOrderedColor,
@@ -78,27 +76,6 @@ export default function JobList() {
   // shows only that week, replacing what was there rather than adding to
   // it, so "next week" then "back" returns to exactly this week's view.
   const [weekOffset, setWeekOffset] = useState(0);
-
-  // Lets the toolbar (search/filter/add) and week-navigation row be hidden
-  // entirely, leaving just a small toggle to bring them back — for
-  // maximizing how much of the job list itself is visible on a small
-  // screen. Doesn't touch the nav tabs above, which live in the shared
-  // layout and are already fairly compact on their own. Starts minimized —
-  // the job list itself is the thing people open this page to see; tapping
-  // the + brings back the toolbar AND the nav tabs (tied together via
-  // NavVisibilityContext below) for anyone who needs to search/filter/add
-  // or switch tabs.
-  const [isMinimized, setIsMinimized] = useState(true);
-  const { setNavHidden } = useContext(NavVisibilityContext);
-
-  // Keeps the shared nav bar in sync with this page's own minimize toggle.
-  // The cleanup always restores it (setNavHidden(false)) — critical for
-  // when navigating away from Jobs while minimized, since nothing else
-  // would otherwise bring the nav bar back on whatever page comes next.
-  useEffect(() => {
-    setNavHidden(isMinimized);
-    return () => setNavHidden(false);
-  }, [isMinimized, setNavHidden]);
 
   // Subcontractor filter + date/subcontractor grouping — matches exactly
   // how the Dashboard's list view used to organize things, moved here since
@@ -476,7 +453,7 @@ export default function JobList() {
         ref={toolbarRef}
         style={{
           display: 'flex',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 8,
@@ -487,40 +464,31 @@ export default function JobList() {
           padding: '6px 0'
         }}
       >
-        <Button
-          appearance="subtle"
-          size="small"
-          icon={isMinimized ? <Add20Regular /> : <Subtract20Regular />}
-          aria-label={isMinimized ? 'Expand' : 'Minimize'}
-          onClick={() => setIsMinimized((m) => !m)}
-        />
-        {!isMinimized && (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <Button
-              appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
-              icon={<Search20Regular />}
-              aria-label="Search"
-              onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
-            />
-            <Button
-              appearance={
-                activePanel === 'filter' || subFilterId !== null || createdByFilter !== null ? 'primary' : 'subtle'
-              }
-              icon={<Filter20Regular />}
-              aria-label="Filter"
-              onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
-            />
-            <Button
-              appearance="primary"
-              icon={<Add20Regular />}
-              aria-label="Add job"
-              onClick={() => setDrawerContent('create')}
-            />
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 6 }}>
+          <Button
+            appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
+            icon={<Search20Regular />}
+            aria-label="Search"
+            onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
+          />
+          <Button
+            appearance={
+              activePanel === 'filter' || subFilterId !== null || createdByFilter !== null ? 'primary' : 'subtle'
+            }
+            icon={<Filter20Regular />}
+            aria-label="Filter"
+            onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
+          />
+          <Button
+            appearance="primary"
+            icon={<Add20Regular />}
+            aria-label="Add job"
+            onClick={() => setDrawerContent('create')}
+          />
+        </div>
       </div>
 
-      {!isMinimized && activePanel === 'search' && (
+      {activePanel === 'search' && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Search" style={{ minWidth: 200, flex: 1 }}>
             <Input
@@ -533,7 +501,7 @@ export default function JobList() {
         </div>
       )}
 
-      {!isMinimized && activePanel === 'filter' && (
+      {activePanel === 'filter' && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Subcontractor" style={{ minWidth: 200 }}>
             {(() => {
@@ -746,9 +714,7 @@ export default function JobList() {
                 </div>
               )}
 
-              {/* Always visible, even minimized — this is the one control
-                  people need regardless of whether the toolbar/tabs are
-                  tucked away, since browsing other weeks is the main thing
+              {/* Week navigation — browsing other weeks is the main thing
                   this page is for. */}
               <div
                 style={{
