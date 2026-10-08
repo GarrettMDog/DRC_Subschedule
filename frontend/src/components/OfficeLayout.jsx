@@ -7,8 +7,8 @@ const NAV_ITEMS = [
   { value: '/', label: 'Jobs' },
   { value: '/subcontractors', label: 'Subcontractors', short: 'Subs' },
   { value: '/services', label: 'Services' },
-  { value: '/calendar', label: 'Calendar' },
-  { value: '/estimating', label: 'Estimating' }
+  { value: '/estimating', label: 'Estimating' },
+  { value: '/calendar', label: 'Calendar' }
 ];
 
 // Lets a page reach up and hide the shared nav bar too — used by the Jobs
