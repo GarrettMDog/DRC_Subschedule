@@ -4,6 +4,7 @@ const db = require('../db/db');
 const router = express.Router();
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
+const STATUSES = ['Not Started', 'In Progress', 'Submitted'];
 
 // GET /api/estimates — highest priority first, then oldest received first
 router.get('/', (req, res) => {
@@ -19,7 +20,7 @@ router.get('/', (req, res) => {
 
 // POST /api/estimates
 router.post('/', (req, res) => {
-  const { date_received, address, contact, priority = 'Medium' } = req.body;
+  const { date_received, address, contact, priority = 'Medium', status = 'Not Started' } = req.body;
 
   if (!date_received || !address?.trim()) {
     return res.status(400).json({ error: 'date_received and address are required' });
@@ -27,14 +28,17 @@ router.post('/', (req, res) => {
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
   }
+  if (!STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${STATUSES.join(', ')}` });
+  }
 
   const createdBy = req.user?.name || req.user?.email || null;
   const result = db
     .prepare(
-      `INSERT INTO estimates (date_received, address, contact, priority, created_by)
-       VALUES (?, ?, ?, ?, ?)`
+      `INSERT INTO estimates (date_received, address, contact, priority, status, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`
     )
-    .run(date_received, address.trim(), contact || null, priority, createdBy);
+    .run(date_received, address.trim(), contact || null, priority, status, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -49,7 +53,8 @@ router.put('/:id', (req, res) => {
     date_received = existing.date_received,
     address = existing.address,
     contact = existing.contact,
-    priority = existing.priority
+    priority = existing.priority,
+    status = existing.status
   } = req.body;
 
   if (!date_received || !address?.trim()) {
@@ -58,12 +63,15 @@ router.put('/:id', (req, res) => {
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
   }
+  if (!STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${STATUSES.join(', ')}` });
+  }
 
   db.prepare(
     `UPDATE estimates
-     SET date_received = ?, address = ?, contact = ?, priority = ?, updated_at = datetime('now')
+     SET date_received = ?, address = ?, contact = ?, priority = ?, status = ?, updated_at = datetime('now')
      WHERE id = ?`
-  ).run(date_received, address.trim(), contact || null, priority, id);
+  ).run(date_received, address.trim(), contact || null, priority, status, id);
 
   res.json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(id));
 });

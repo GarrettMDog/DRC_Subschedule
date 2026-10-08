@@ -27,13 +27,16 @@ import { useConfirmDialog } from '../components/useConfirmDialog';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
+const STATUSES = ['Not Started', 'In Progress', 'Submitted'];
+const STATUS_COLOR = { 'Not Started': 'subtle', 'In Progress': 'brand', Submitted: 'success' };
 const PRIORITY_COLOR = { High: 'danger', Medium: 'warning', Low: 'informative' };
 
 const emptyForm = () => ({
   date_received: toYMD(new Date()),
   address: '',
   contact: '',
-  priority: 'Medium'
+  priority: 'Medium',
+  status: 'Not Started'
 });
 
 export default function Estimating() {
@@ -75,7 +78,8 @@ export default function Estimating() {
       date_received: row.date_received,
       address: row.address || '',
       contact: row.contact || '',
-      priority: row.priority
+      priority: row.priority,
+      status: row.status
     });
     setDrawer(row);
   }
@@ -142,16 +146,21 @@ export default function Estimating() {
           <Table aria-label="Estimating list" style={{ minWidth: 560 }}>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell>Date Received</TableHeaderCell>
+                <TableHeaderCell>Status</TableHeaderCell>
                 <TableHeaderCell>Address</TableHeaderCell>
                 <TableHeaderCell>Contact</TableHeaderCell>
                 <TableHeaderCell>Priority</TableHeaderCell>
+                <TableHeaderCell>Date Received</TableHeaderCell>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id} onClick={() => openEdit(r)} style={{ cursor: 'pointer' }}>
-                  <TableCell>{formatDate(r.date_received)}</TableCell>
+                  <TableCell>
+                    <Badge appearance="tint" color={STATUS_COLOR[r.status] || 'informative'}>
+                      {r.status}
+                    </Badge>
+                  </TableCell>
                   <TableCell>
                     <strong>{r.address}</strong>
                   </TableCell>
@@ -159,6 +168,7 @@ export default function Estimating() {
                   <TableCell>
                     <Badge color={PRIORITY_COLOR[r.priority] || 'informative'}>{r.priority}</Badge>
                   </TableCell>
+                  <TableCell>{formatDate(r.date_received)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -181,13 +191,18 @@ export default function Estimating() {
         </DrawerHeader>
         <DrawerBody>
           <form onSubmit={handleSave} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Date received" required>
-              <Input
-                type="date"
-                required
-                value={form.date_received}
-                onChange={(e) => setForm({ ...form, date_received: e.target.value })}
-              />
+            <Field label="Status">
+              <Dropdown
+                value={form.status}
+                selectedOptions={[form.status]}
+                onOptionSelect={(_, data) => setForm({ ...form, status: data.optionValue })}
+              >
+                {STATUSES.map((st) => (
+                  <Option key={st} value={st}>
+                    {st}
+                  </Option>
+                ))}
+              </Dropdown>
             </Field>
             <Field label="Address" required>
               <AddressAutocomplete
@@ -211,6 +226,14 @@ export default function Estimating() {
                   </Option>
                 ))}
               </Dropdown>
+            </Field>
+            <Field label="Date received" required>
+              <Input
+                type="date"
+                required
+                value={form.date_received}
+                onChange={(e) => setForm({ ...form, date_received: e.target.value })}
+              />
             </Field>
             <Button appearance="primary" type="submit" disabled={saving}>
               {saving ? 'Saving…' : isCreating ? 'Add' : 'Save changes'}
