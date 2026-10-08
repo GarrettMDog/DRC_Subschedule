@@ -7,7 +7,8 @@ export const MATERIAL_OPTIONS = [
   'Dumptruck',
   'Supplies',
   'Dump Trailer',
-  'Georgia Buggy'
+  'Georgia Buggy',
+  'Inspection'
 ];
 
 export const ASSIGNMENT_STATUS_COLOR = {
