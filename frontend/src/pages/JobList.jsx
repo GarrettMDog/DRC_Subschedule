@@ -442,7 +442,6 @@ export default function JobList() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {confirmDialog}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
@@ -852,15 +851,19 @@ export default function JobList() {
         onDuplicate={handleDuplicateJob}
         onDelete={handleDeleteJob}
         setError={setError}
-      />
-
-      <EditAssignmentDrawer
-        assignment={editingAssignment}
-        onClose={() => setEditingAssignment(null)}
-        subcontractors={subcontractors}
-        onSaved={() => refresh(['assignments'])}
-        setError={setError}
-      />
+      >
+        {/* Rendered inside the job drawer so Fluent treats them as nested
+            dialogs; as siblings they left the job drawer's fields unable to
+            take focus after the dialog closed. */}
+        {confirmDialog}
+        <EditAssignmentDrawer
+          assignment={editingAssignment}
+          onClose={() => setEditingAssignment(null)}
+          subcontractors={subcontractors}
+          onSaved={() => refresh(['assignments'])}
+          setError={setError}
+        />
+      </EditJobDrawer>
     </div>
   );
 }
