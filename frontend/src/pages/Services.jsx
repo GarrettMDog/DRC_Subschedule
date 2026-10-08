@@ -182,7 +182,12 @@ export default function Services() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-      {confirmDialog}
+      {/* The confirm popup is also used from the list's trash button, so it sits
+          here when no drawer is open; while the to-do drawer is open it is
+          rendered inside it instead (below) so Fluent treats it as a nested
+          dialog — as a sibling it left the drawer's fields unable to take
+          focus after the popup closed. */}
+      {todoDrawer === null && confirmDialog}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
@@ -371,6 +376,7 @@ export default function Services() {
               </Button>
             )}
           </form>
+          {todoDrawer !== null && confirmDialog}
         </DrawerBody>
       </OverlayDrawer>
 
