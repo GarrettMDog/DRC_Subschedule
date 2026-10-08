@@ -241,3 +241,51 @@ body {
   text-overflow: ellipsis;
   font-size: 13px;
 }
+
+/* --- Office nav tabs: one line at every width --- */
+.office-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  overflow-x: auto; /* safety net on very narrow screens */
+  scrollbar-width: none;
+}
+.office-nav::-webkit-scrollbar {
+  display: none;
+}
+.nav-tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: var(--borderRadiusMedium, 4px);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--colorNeutralForeground2);
+}
+.nav-tab.active {
+  font-weight: 600;
+  color: var(--colorBrandForeground1);
+  background: var(--colorBrandBackground2);
+}
+.nav-label-short {
+  display: none;
+}
+@media (max-width: 599px) {
+  .office-nav {
+    gap: 0;
+    justify-content: space-between;
+  }
+  .nav-tab {
+    flex: 1 1 auto;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 13px;
+  }
+  .nav-label-full {
+    display: none;
+  }
+  .nav-label-short {
+    display: inline;
+  }
+}
