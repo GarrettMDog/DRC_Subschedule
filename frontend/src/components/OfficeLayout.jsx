@@ -1,11 +1,13 @@
 import { createContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+// `short` is the label used on narrow (phone) screens so all tabs fit on one
+// line — see the .nav-tab rules in styles.css.
 const NAV_ITEMS = [
   { value: '/', label: 'Jobs' },
-  { value: '/calendar', label: 'Calendar' },
-  { value: '/subcontractors', label: 'Subcontractors' },
+  { value: '/subcontractors', label: 'Subcontractors', short: 'Subs' },
   { value: '/services', label: 'Services' },
+  { value: '/calendar', label: 'Calendar' },
   { value: '/estimating', label: 'Estimating' }
 ];
 
@@ -61,29 +63,24 @@ export default function OfficeLayout({ children }) {
             zIndex: 10
           }}
         >
-          {/* Plain flex-wrap nav, not Fluent's TabList — TabList is documented to never
-              wrap or scroll on narrow containers (Fluent's own usage guidance), so on a
-              phone-width screen with 3 labels including "Subcontractors" it would just
-              run off the edge instead of dropping to a second line. */}
+          {/* Plain flex nav, not Fluent's TabList — TabList never wraps or
+              scrolls on narrow containers. On phones the tabs share the row
+              equally and shrink (short labels, smaller text) so they all fit
+              on one line; see .office-nav in styles.css. */}
           {!navHidden && (
-            <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <nav className="office-nav">
               {NAV_ITEMS.map((item) => {
                 const active = location.pathname === item.value;
                 return (
-                  <Link key={item.value} to={item.value} style={{ textDecoration: 'none' }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '6px 10px',
-                        borderRadius: 'var(--borderRadiusMedium, 4px)',
-                        fontSize: 14,
-                        fontWeight: active ? 600 : 400,
-                        color: active ? 'var(--colorBrandForeground1)' : 'var(--colorNeutralForeground2)',
-                        background: active ? 'var(--colorBrandBackground2)' : 'transparent'
-                      }}
-                    >
-                      {item.label}
-                    </span>
+                  <Link key={item.value} to={item.value} className={`nav-tab${active ? ' active' : ''}`}>
+                    {item.short ? (
+                      <>
+                        <span className="nav-label-full">{item.label}</span>
+                        <span className="nav-label-short">{item.short}</span>
+                      </>
+                    ) : (
+                      item.label
+                    )}
                   </Link>
                 );
               })}
