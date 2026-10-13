@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -20,7 +20,7 @@ import {
   TableBody,
   TableCell
 } from '@fluentui/react-components';
-import { Add20Regular, Dismiss24Regular, Delete20Regular } from '@fluentui/react-icons';
+import { Add20Regular, Dismiss24Regular, Delete20Regular, Search20Regular } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
 import { formatDate, toYMD } from '../dateUtils';
@@ -44,6 +44,8 @@ export default function Estimating() {
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [error, setError] = useState(null);
 
   // 'create' shows the add form, a row object edits that row, null closes it.
@@ -131,6 +133,16 @@ export default function Estimating() {
     }
   }
 
+  const visibleRows = useMemo(() => {
+    const q = searchText.trim().toLowerCase();
+    return rows.filter((r) => {
+      // Searching looks through completed items too, so an old one is findable
+      // even while "Hide completed" is on.
+      if (!q) return !(hideCompleted && r.completed);
+      return (r.address || '').toLowerCase().includes(q) || (r.contact || '').toLowerCase().includes(q);
+    });
+  }, [rows, searchText, hideCompleted]);
+
   if (loading) return <p>Loading…</p>;
 
   const isCreating = drawer === 'create';
@@ -138,7 +150,6 @@ export default function Estimating() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {confirmDialog}
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
@@ -146,14 +157,36 @@ export default function Estimating() {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h3 style={{ margin: 0 }}>Estimating ({rows.length})</h3>
+        <h3 style={{ margin: 0 }}>Estimating ({visibleRows.length})</h3>
         <Button appearance="primary" icon={<Add20Regular />} onClick={openCreate}>
           Add
         </Button>
       </div>
 
-      {rows.length === 0 ? (
-        <p>Nothing on the estimating list. Click "Add" to add an address to it.</p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+        <Input
+          style={{ flex: 1, minWidth: 200 }}
+          contentBefore={<Search20Regular />}
+          placeholder="Search address or contact…"
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          aria-label="Search estimates"
+        />
+        <Checkbox
+          label="Hide completed"
+          checked={hideCompleted}
+          onChange={(_, data) => setHideCompleted(data.checked)}
+        />
+      </div>
+
+      {visibleRows.length === 0 ? (
+        <p>
+          {rows.length === 0
+            ? 'Nothing on the estimating list. Click "Add" to add an address to it.'
+            : searchText.trim()
+            ? 'No estimates match your search.'
+            : 'Nothing outstanding — nice work.'}
+        </p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <Table aria-label="Estimating list" style={{ minWidth: 640 }}>
@@ -168,7 +201,7 @@ export default function Estimating() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {visibleRows.map((r) => (
                 <TableRow
                   key={r.id}
                   onClick={() => openEdit(r)}
@@ -264,6 +297,9 @@ export default function Estimating() {
               </Button>
             )}
           </form>
+          {/* Nested inside the drawer (not a sibling) so the drawer's fields keep
+              working after the confirmation closes. */}
+          {confirmDialog}
         </DrawerBody>
       </OverlayDrawer>
     </div>
