@@ -20,7 +20,7 @@ router.get('/', (req, res) => {
 
 // POST /api/estimates
 router.post('/', (req, res) => {
-  const { date_received, address, contact, priority = 'Medium', status = 'Not Started' } = req.body;
+  const { date_received, address, contact, priority = 'Medium', status = 'Not Started', due_date } = req.body;
 
   if (!date_received || !address?.trim()) {
     return res.status(400).json({ error: 'date_received and address are required' });
@@ -35,10 +35,10 @@ router.post('/', (req, res) => {
   const createdBy = req.user?.name || req.user?.email || null;
   const result = db
     .prepare(
-      `INSERT INTO estimates (date_received, address, contact, priority, status, created_by)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO estimates (date_received, address, contact, priority, status, due_date, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(date_received, address.trim(), contact || null, priority, status, createdBy);
+    .run(date_received, address.trim(), contact || null, priority, status, due_date || null, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -54,7 +54,8 @@ router.put('/:id', (req, res) => {
     address = existing.address,
     contact = existing.contact,
     priority = existing.priority,
-    status = existing.status
+    status = existing.status,
+    due_date = existing.due_date
   } = req.body;
 
   if (!date_received || !address?.trim()) {
@@ -69,9 +70,9 @@ router.put('/:id', (req, res) => {
 
   db.prepare(
     `UPDATE estimates
-     SET date_received = ?, address = ?, contact = ?, priority = ?, status = ?, updated_at = datetime('now')
+     SET date_received = ?, address = ?, contact = ?, priority = ?, status = ?, due_date = ?, updated_at = datetime('now')
      WHERE id = ?`
-  ).run(date_received, address.trim(), contact || null, priority, status, id);
+  ).run(date_received, address.trim(), contact || null, priority, status, due_date || null, id);
 
   res.json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(id));
 });

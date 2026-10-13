@@ -36,7 +36,8 @@ const emptyForm = () => ({
   address: '',
   contact: '',
   priority: 'Medium',
-  status: 'Not Started'
+  status: 'Not Started',
+  due_date: ''
 });
 
 export default function Estimating() {
@@ -79,7 +80,8 @@ export default function Estimating() {
       address: row.address || '',
       contact: row.contact || '',
       priority: row.priority,
-      status: row.status
+      status: row.status,
+      due_date: row.due_date || ''
     });
     setDrawer(row);
   }
@@ -143,10 +145,11 @@ export default function Estimating() {
         <p>Nothing on the estimating list. Click "Add" to add an address to it.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <Table aria-label="Estimating list" style={{ minWidth: 560 }}>
+          <Table aria-label="Estimating list" style={{ minWidth: 640 }}>
             <TableHeader>
               <TableRow>
                 <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Due Date</TableHeaderCell>
                 <TableHeaderCell>Address</TableHeaderCell>
                 <TableHeaderCell>Contact</TableHeaderCell>
                 <TableHeaderCell>Priority</TableHeaderCell>
@@ -161,6 +164,7 @@ export default function Estimating() {
                       {r.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>{r.due_date ? formatDate(r.due_date) : ''}</TableCell>
                   <TableCell>
                     <strong>{r.address}</strong>
                   </TableCell>
@@ -203,6 +207,13 @@ export default function Estimating() {
                   </Option>
                 ))}
               </Dropdown>
+            </Field>
+            <Field label="Due date">
+              <Input
+                type="date"
+                value={form.due_date}
+                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
+              />
             </Field>
             <Field label="Address" required>
               <AddressAutocomplete

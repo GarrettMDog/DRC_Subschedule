@@ -87,6 +87,7 @@ db.exec(`
     contact TEXT,
     priority TEXT NOT NULL DEFAULT 'Medium',
     status TEXT NOT NULL DEFAULT 'Not Started',
+    due_date TEXT,
     created_by TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -171,6 +172,10 @@ if (estimateColumns.some((col) => col.name === 'project_name')) {
 
 if (!db.prepare('PRAGMA table_info(estimates)').all().some((col) => col.name === 'status')) {
   db.exec("ALTER TABLE estimates ADD COLUMN status TEXT NOT NULL DEFAULT 'Not Started'");
+}
+
+if (!db.prepare('PRAGMA table_info(estimates)').all().some((col) => col.name === 'due_date')) {
+  db.exec('ALTER TABLE estimates ADD COLUMN due_date TEXT');
 }
 
 module.exports = db;
