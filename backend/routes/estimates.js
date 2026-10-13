@@ -4,14 +4,14 @@ const db = require('../db/db');
 const router = express.Router();
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
-const STATUSES = ['Not Started', 'In Progress', 'Submitted'];
 
-// GET /api/estimates — highest priority first, then oldest received first
+// GET /api/estimates — open items first (highest priority, then oldest received),
+// completed ones sink to the bottom
 router.get('/', (req, res) => {
   const rows = db
     .prepare(
       `SELECT * FROM estimates
-       ORDER BY CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 ELSE 2 END,
+       ORDER BY completed ASC, CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 ELSE 2 END,
                 date_received ASC, id ASC`
     )
     .all();
@@ -20,7 +20,7 @@ router.get('/', (req, res) => {
 
 // POST /api/estimates
 router.post('/', (req, res) => {
-  const { date_received, address, contact, priority = 'Medium', status = 'Not Started', due_date } = req.body;
+  const { date_received, address, contact, priority = 'Medium', completed, due_date } = req.body;
 
   if (!date_received || !address?.trim()) {
     return res.status(400).json({ error: 'date_received and address are required' });
@@ -28,17 +28,14 @@ router.post('/', (req, res) => {
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
   }
-  if (!STATUSES.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${STATUSES.join(', ')}` });
-  }
 
   const createdBy = req.user?.name || req.user?.email || null;
   const result = db
     .prepare(
-      `INSERT INTO estimates (date_received, address, contact, priority, status, due_date, created_by)
+      `INSERT INTO estimates (date_received, address, contact, priority, completed, due_date, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
-    .run(date_received, address.trim(), contact || null, priority, status, due_date || null, createdBy);
+    .run(date_received, address.trim(), contact || null, priority, completed ? 1 : 0, due_date || null, createdBy);
 
   res.status(201).json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(result.lastInsertRowid));
 });
@@ -54,7 +51,7 @@ router.put('/:id', (req, res) => {
     address = existing.address,
     contact = existing.contact,
     priority = existing.priority,
-    status = existing.status,
+    completed = existing.completed,
     due_date = existing.due_date
   } = req.body;
 
@@ -64,15 +61,12 @@ router.put('/:id', (req, res) => {
   if (!PRIORITIES.includes(priority)) {
     return res.status(400).json({ error: `priority must be one of: ${PRIORITIES.join(', ')}` });
   }
-  if (!STATUSES.includes(status)) {
-    return res.status(400).json({ error: `status must be one of: ${STATUSES.join(', ')}` });
-  }
 
   db.prepare(
     `UPDATE estimates
-     SET date_received = ?, address = ?, contact = ?, priority = ?, status = ?, due_date = ?, updated_at = datetime('now')
+     SET date_received = ?, address = ?, contact = ?, priority = ?, completed = ?, due_date = ?, updated_at = datetime('now')
      WHERE id = ?`
-  ).run(date_received, address.trim(), contact || null, priority, status, due_date || null, id);
+  ).run(date_received, address.trim(), contact || null, priority, completed ? 1 : 0, due_date || null, id);
 
   res.json(db.prepare('SELECT * FROM estimates WHERE id = ?').get(id));
 });
