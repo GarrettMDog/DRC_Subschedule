@@ -133,11 +133,13 @@ export default function JobList() {
   const [scrollToDate, setScrollToDate] = useState(null);
 
   // Default view is today-forward only — a completed job drops off the
-  // list, by design. This lifts that restriction, but only for the one
-  // view landed on via a past-date Calendar link; it is NOT a general
-  // "browse history" toggle (that's a separate, not-yet-decided feature).
-  // Manually paging with Prev/Next resets it back off, so the relaxed
-  // filter doesn't quietly leak into ordinary forward browsing afterward.
+  // list, by design. This lifts that restriction, but only once someone
+  // lands on a past date via a Calendar link; it is NOT a general "browse
+  // history" toggle (that's a separate, not-yet-decided feature). While
+  // viewing past weeks that way, Prev/Next keep it on so the neighboring
+  // weeks show their jobs too (otherwise the very next week looked blank).
+  // It switches back off the moment they page forward out of the current
+  // week, so the relaxed filter doesn't leak into ordinary forward browsing.
   const [includePastJobs, setIncludePastJobs] = useState(false);
 
   // The exact date a Calendar link pointed at — unlike scrollToDate (which
@@ -146,8 +148,8 @@ export default function JobList() {
   // guaranteed-visible (even an empty weekend day) across re-renders after
   // the scroll happens, not just in the single render that triggers it —
   // otherwise the row the person just scrolled to could vanish out from
-  // under them the instant scrollToDate resets to null. Reset alongside
-  // includePastJobs on manual Prev/Next, same reasoning as that flag.
+  // under them the instant scrollToDate resets to null. Reset on any
+  // manual Prev/Next.
   const [linkedDate, setLinkedDate] = useState(null);
 
   // Lets the Calendar jump straight to the week containing a specific date
@@ -612,6 +614,19 @@ export default function JobList() {
             }
           }
 
+          // Viewing a past week (reached via a Calendar link): seed that
+          // week's Mon–Fri too, so a week with nothing on it reads as "No jobs
+          // scheduled" rows rather than a completely blank page.
+          if (!searchText.trim() && weekOffset < 0) {
+            const pastMonday = getWeek0Monday();
+            pastMonday.setDate(pastMonday.getDate() + weekOffset * 7);
+            for (let i = 0; i < 5; i++) {
+              const d = new Date(pastMonday);
+              d.setDate(d.getDate() + i);
+              dateGroups[toYMD(d)] = [];
+            }
+          }
+
           for (const { job, activeAssignments } of filtered) {
             for (const a of activeAssignments) {
               if (!includePastJobs && a.end_date < todayYMD) continue;
@@ -732,14 +747,13 @@ export default function JobList() {
               >
                 <Button
                   appearance="subtle"
-                  disabled={weekOffset <= 0}
+                  // Going back is only offered from the current week while
+                  // viewing past weeks via a Calendar link (includePastJobs);
+                  // ordinary browsing stays today-forward.
+                  disabled={(weekOffset <= 0 && !includePastJobs) || weekOffset <= -52}
                   onClick={() => {
-                    // Manually paging away is what scopes the past-date
-                    // link's relaxed filter back down to "just that one
-                    // view" — see the comments on includePastJobs/linkedDate.
-                    setIncludePastJobs(false);
                     setLinkedDate(null);
-                    setWeekOffset((w) => Math.max(0, w - 1));
+                    setWeekOffset((w) => w - 1);
                   }}
                 >
                   ← Prev
@@ -751,7 +765,9 @@ export default function JobList() {
                   appearance="subtle"
                   disabled={weekOffset >= 3}
                   onClick={() => {
-                    setIncludePastJobs(false);
+                    // Stepping through past weeks keeps their jobs visible;
+                    // paging forward out of the current week ends that.
+                    if (weekOffset >= 0) setIncludePastJobs(false);
                     setLinkedDate(null);
                     setWeekOffset((w) => Math.min(3, w + 1));
                   }}
