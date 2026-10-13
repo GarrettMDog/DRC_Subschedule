@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import {
   Badge,
   Button,
+  Checkbox,
   Field,
   Input,
   Dropdown,
@@ -27,8 +28,6 @@ import { useConfirmDialog } from '../components/useConfirmDialog';
 import AddressAutocomplete from '../components/AddressAutocomplete';
 
 const PRIORITIES = ['High', 'Medium', 'Low'];
-const STATUSES = ['Not Started', 'In Progress', 'Submitted'];
-const STATUS_COLOR = { 'Not Started': 'subtle', 'In Progress': 'brand', Submitted: 'success' };
 const PRIORITY_COLOR = { High: 'danger', Medium: 'warning', Low: 'informative' };
 
 const emptyForm = () => ({
@@ -36,7 +35,7 @@ const emptyForm = () => ({
   address: '',
   contact: '',
   priority: 'Medium',
-  status: 'Not Started',
+  completed: false,
   due_date: ''
 });
 
@@ -80,7 +79,7 @@ export default function Estimating() {
       address: row.address || '',
       contact: row.contact || '',
       priority: row.priority,
-      status: row.status,
+      completed: !!row.completed,
       due_date: row.due_date || ''
     });
     setDrawer(row);
@@ -103,6 +102,18 @@ export default function Estimating() {
       setError(err.message || 'Could not save that estimate.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  // Quick-toggle straight from the table — saves immediately, no form needed.
+  async function toggleCompleted(row) {
+    setError(null);
+    try {
+      const token = await getToken();
+      await api.updateEstimate(token, row.id, { completed: !row.completed });
+      await load();
+    } catch (err) {
+      setError(err.message || 'Could not update that estimate.');
     }
   }
 
@@ -148,7 +159,7 @@ export default function Estimating() {
           <Table aria-label="Estimating list" style={{ minWidth: 640 }}>
             <TableHeader>
               <TableRow>
-                <TableHeaderCell>Status</TableHeaderCell>
+                <TableHeaderCell>Completed</TableHeaderCell>
                 <TableHeaderCell>Due Date</TableHeaderCell>
                 <TableHeaderCell>Address</TableHeaderCell>
                 <TableHeaderCell>Contact</TableHeaderCell>
@@ -158,15 +169,21 @@ export default function Estimating() {
             </TableHeader>
             <TableBody>
               {rows.map((r) => (
-                <TableRow key={r.id} onClick={() => openEdit(r)} style={{ cursor: 'pointer' }}>
-                  <TableCell>
-                    <Badge appearance="tint" color={STATUS_COLOR[r.status] || 'informative'}>
-                      {r.status}
-                    </Badge>
+                <TableRow
+                  key={r.id}
+                  onClick={() => openEdit(r)}
+                  style={{ cursor: 'pointer', opacity: r.completed ? 0.55 : 1 }}
+                >
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={!!r.completed}
+                      onChange={() => toggleCompleted(r)}
+                      aria-label={`Mark ${r.address} completed`}
+                    />
                   </TableCell>
                   <TableCell>{r.due_date ? formatDate(r.due_date) : ''}</TableCell>
                   <TableCell>
-                    <strong>{r.address}</strong>
+                    <strong style={{ textDecoration: r.completed ? 'line-through' : 'none' }}>{r.address}</strong>
                   </TableCell>
                   <TableCell>{r.contact}</TableCell>
                   <TableCell>
@@ -195,19 +212,11 @@ export default function Estimating() {
         </DrawerHeader>
         <DrawerBody>
           <form onSubmit={handleSave} style={{ display: 'grid', gap: 12 }}>
-            <Field label="Status">
-              <Dropdown
-                value={form.status}
-                selectedOptions={[form.status]}
-                onOptionSelect={(_, data) => setForm({ ...form, status: data.optionValue })}
-              >
-                {STATUSES.map((st) => (
-                  <Option key={st} value={st}>
-                    {st}
-                  </Option>
-                ))}
-              </Dropdown>
-            </Field>
+            <Checkbox
+              label="Completed"
+              checked={form.completed}
+              onChange={(_, data) => setForm({ ...form, completed: data.checked })}
+            />
             <Field label="Due date">
               <Input
                 type="date"

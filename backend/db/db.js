@@ -86,7 +86,7 @@ db.exec(`
     address TEXT NOT NULL,
     contact TEXT,
     priority TEXT NOT NULL DEFAULT 'Medium',
-    status TEXT NOT NULL DEFAULT 'Not Started',
+    completed INTEGER NOT NULL DEFAULT 0,
     due_date TEXT,
     created_by TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -170,8 +170,17 @@ if (estimateColumns.some((col) => col.name === 'project_name')) {
   `);
 }
 
-if (!db.prepare('PRAGMA table_info(estimates)').all().some((col) => col.name === 'status')) {
-  db.exec("ALTER TABLE estimates ADD COLUMN status TEXT NOT NULL DEFAULT 'Not Started'");
+// Estimates briefly had a 3-way status; it's now a simple completed checkbox.
+// Anything already marked 'Submitted' counts as completed.
+const estimateCols = db.prepare('PRAGMA table_info(estimates)').all().map((col) => col.name);
+if (!estimateCols.includes('completed')) {
+  db.exec('ALTER TABLE estimates ADD COLUMN completed INTEGER NOT NULL DEFAULT 0');
+}
+if (estimateCols.includes('status')) {
+  db.exec(`
+    UPDATE estimates SET completed = 1 WHERE status = 'Submitted';
+    ALTER TABLE estimates DROP COLUMN status;
+  `);
 }
 
 if (!db.prepare('PRAGMA table_info(estimates)').all().some((col) => col.name === 'due_date')) {
