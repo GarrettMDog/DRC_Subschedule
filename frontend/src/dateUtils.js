@@ -55,7 +55,11 @@ export function toYMD(date) {
  * the Calendar — share one definition instead of two that could drift.
  */
 export function getWeek0Monday() {
-  const today = new Date();
+  // Start from midnight, not `new Date()` — carrying the current time of day
+  // along made every later "how many days from week 0" comparison off by a
+  // fraction of a day, which flipped Monday links to the wrong week after noon.
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dayOfWeek = today.getDay();
   const daysUntilFriday = ((5 - dayOfWeek) % 7 + 7) % 7;
   const friday = new Date(today);
@@ -74,7 +78,10 @@ export function getWeek0Monday() {
 export function getWeekOffsetForDate(dateString) {
   const week0Monday = getWeek0Monday();
   const target = parseLocalDate(dateString);
-  const diffDays = Math.round((target - week0Monday) / (1000 * 60 * 60 * 24));
+  // Compare calendar days via UTC so a daylight-saving change in between
+  // can't shift the count by an hour.
+  const utcDay = (d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((utcDay(target) - utcDay(week0Monday)) / (1000 * 60 * 60 * 24));
   return Math.floor(diffDays / 7);
 }
 
