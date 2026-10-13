@@ -114,19 +114,19 @@ export default function JobList() {
   }, []);
 
   // Lets the Calendar's job-detail popover jump straight to a specific
-  // job's edit view via a link like "/?editJobId=123" — waits for jobs to
+  // job's edit view via a link like "/?editJobId=123" — waits for the data to
   // actually be loaded first, since this data arrives asynchronously.
   // Clears the query param once handled so refreshing or navigating back
   // doesn't re-trigger it.
   useEffect(() => {
-    if (jobs.length === 0) return;
+    if (loading) return;
     const editJobId = searchParams.get('editJobId');
     if (!editJobId) return;
     const job = jobs.find((j) => j.id === Number(editJobId));
     if (job) openJobDetail(job);
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobs]);
+  }, [loading]);
 
   // Which date to scroll down to once its week has rendered — set by the
   // deep-link effect below, consumed by the scroll effect further down.
@@ -158,7 +158,7 @@ export default function JobList() {
   // filter just for this view — otherwise a past date would compute a
   // valid week and still show nothing on it, same gap that prompted this.
   useEffect(() => {
-    if (jobs.length === 0) return;
+    if (loading) return;
     const targetDate = searchParams.get('date');
     if (!targetDate) return;
     setWeekOffset(getWeekOffsetForDate(targetDate));
@@ -169,7 +169,7 @@ export default function JobList() {
     }
     setSearchParams({}, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobs]);
+  }, [loading]);
 
   // Once the week containing scrollToDate has actually rendered — the
   // weekOffset change above triggers a re-render that populates
@@ -676,10 +676,17 @@ export default function JobList() {
           const weekNSunday = new Date(weekNSaturday);
           weekNSunday.setDate(weekNSunday.getDate() + 1);
 
+          // A weekend day counts as "active" if it has jobs OR it's the exact
+          // date a Calendar link pointed at — otherwise the week range would
+          // stop at Friday and clip the linked day right back out of view.
+          const weekendDayActive = (d) => {
+            const ymd = toYMD(d);
+            return dateGroups[ymd]?.length > 0 || ymd === linkedDate;
+          };
           let weekEnd = weekNFriday;
-          if (dateGroups[toYMD(weekNSunday)]?.length > 0) {
+          if (weekendDayActive(weekNSunday)) {
             weekEnd = weekNSunday;
-          } else if (dateGroups[toYMD(weekNSaturday)]?.length > 0) {
+          } else if (weekendDayActive(weekNSaturday)) {
             weekEnd = weekNSaturday;
           }
           const weekStartYMD = toYMD(weekNMonday);
