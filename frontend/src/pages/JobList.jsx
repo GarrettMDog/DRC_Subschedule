@@ -480,7 +480,8 @@ export default function JobList() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    // data-row-size drives the row height AND the toolbar button size (see styles.css)
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} data-row-size={rowSize}>
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
@@ -509,6 +510,7 @@ export default function JobList() {
           >
             <MenuTrigger disableButtonEnhancement>
               <Button
+                className="jobs-toolbar-btn"
                 appearance="subtle"
                 icon={<TextFontSize20Regular />}
                 aria-label="Row size"
@@ -518,7 +520,12 @@ export default function JobList() {
             <MenuPopover>
               <MenuList>
                 {ROW_SIZES.map((x) => (
-                  <MenuItemRadio key={x.value} name="rowSize" value={x.value}>
+                  <MenuItemRadio
+                    key={x.value}
+                    name="rowSize"
+                    value={x.value}
+                    className={`jobs-menu-item jobs-menu-item-${rowSize}`}
+                  >
                     {x.label}
                   </MenuItemRadio>
                 ))}
@@ -526,12 +533,14 @@ export default function JobList() {
             </MenuPopover>
           </Menu>
           <Button
+            className="jobs-toolbar-btn"
             appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
             icon={<Search20Regular />}
             aria-label="Search"
             onClick={() => setActivePanel(activePanel === 'search' ? null : 'search')}
           />
           <Button
+            className="jobs-toolbar-btn"
             appearance={
               activePanel === 'filter' || subFilterId !== null || createdByFilter !== null ? 'primary' : 'subtle'
             }
@@ -540,6 +549,7 @@ export default function JobList() {
             onClick={() => setActivePanel(activePanel === 'filter' ? null : 'filter')}
           />
           <Button
+            className="jobs-toolbar-btn"
             appearance="primary"
             icon={<Add20Regular />}
             aria-label="Add job"
@@ -617,7 +627,7 @@ export default function JobList() {
         </div>
       )}
 
-      <div data-row-size={rowSize}>
+      <div>
         {(() => {
           // Each visible job's active assignments — now that multiple subs
           // can work the same job (one for prep, another for the pour, or

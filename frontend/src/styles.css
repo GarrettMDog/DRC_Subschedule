@@ -230,6 +230,27 @@ body {
   font-size: 16px;
 }
 
+/* The Jobs toolbar buttons (Row size / Search / Filter / Add) follow the same
+   setting, so people who want bigger tap targets get them up top too. Compact
+   leaves them at Fluent's default 32px. */
+[data-row-size='comfortable'] .jobs-toolbar-btn {
+  height: 40px;
+  min-width: 40px;
+}
+[data-row-size='large'] .jobs-toolbar-btn {
+  height: 48px;
+  min-width: 48px;
+}
+/* The Row size menu renders in a portal outside the page, so its items are
+   sized by their own class rather than the data attribute (doubled class
+   so it outranks Fluent's own min-height). */
+.jobs-menu-item.jobs-menu-item-comfortable {
+  min-height: 40px;
+}
+.jobs-menu-item.jobs-menu-item-large {
+  min-height: 48px;
+}
+
 /* Single-line layout: address, type, sub, and materials status all read
    on one row, truncating with an ellipsis instead of wrapping. This (not
    the padding alone) is what actually buys back the vertical space —
