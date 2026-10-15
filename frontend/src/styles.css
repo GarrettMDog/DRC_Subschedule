@@ -213,6 +213,23 @@ body {
   padding: 5px 10px;
 }
 
+/* Per-person row size (Jobs toolbar → Row size). Compact above is the default;
+   these bump the padding, text and minimum height so rows are easier to tap. */
+[data-row-size='comfortable'] .job-row {
+  padding: 10px 12px;
+  min-height: 52px;
+}
+[data-row-size='comfortable'] .job-row-line {
+  font-size: 15px;
+}
+[data-row-size='large'] .job-row {
+  padding: 14px 14px;
+  min-height: 68px;
+}
+[data-row-size='large'] .job-row-line {
+  font-size: 16px;
+}
+
 /* Single-line layout: address, type, sub, and materials status all read
    on one row, truncating with an ellipsis instead of wrapping. This (not
    the padding alone) is what actually buys back the vertical space —

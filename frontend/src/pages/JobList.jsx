@@ -7,6 +7,11 @@ import {
   Dropdown,
   Option,
   Combobox,
+  Menu,
+  MenuTrigger,
+  MenuPopover,
+  MenuList,
+  MenuItemRadio,
   MessageBar,
   MessageBarBody
 } from '@fluentui/react-components';
@@ -14,7 +19,8 @@ import {
   ChevronRight16Regular,
   Search20Regular,
   Filter20Regular,
-  Add20Regular
+  Add20Regular,
+  TextFontSize20Regular
 } from '@fluentui/react-icons';
 import { api } from '../api/client';
 import { useApiToken } from '../auth/useApiToken';
@@ -32,6 +38,27 @@ import {
   parseMaterials,
   materialsOrderStatus
 } from '../theme';
+
+// How tall/large each job row is — a per-person display preference (some
+// teammates want big, easy-to-tap rows; others want to see more at once).
+// Remembered in this browser only, so one person's choice never affects
+// anyone else's.
+const ROW_SIZE_KEY = 'jobRowSize';
+const ROW_SIZES = [
+  { value: 'compact', label: 'Compact' },
+  { value: 'comfortable', label: 'Comfortable' },
+  { value: 'large', label: 'Large' }
+];
+
+function loadRowSize() {
+  try {
+    const saved = window.localStorage.getItem(ROW_SIZE_KEY);
+    if (ROW_SIZES.some((s) => s.value === saved)) return saved;
+  } catch {
+    // Storage can be blocked (private window, embedded Teams tab) — just use the default.
+  }
+  return 'compact';
+}
 
 export default function JobList() {
   const { getToken } = useApiToken();
@@ -70,6 +97,16 @@ export default function JobList() {
   // hidden; the button itself gets a filled/primary look as the visual cue
   // that something's still active behind it.
   const [activePanel, setActivePanel] = useState(null);
+
+  const [rowSize, setRowSize] = useState(loadRowSize);
+  function changeRowSize(value) {
+    setRowSize(value);
+    try {
+      window.localStorage.setItem(ROW_SIZE_KEY, value);
+    } catch {
+      // Not being able to remember it is fine; it still applies for this visit.
+    }
+  }
 
   // Which week is currently being viewed — 0 is the current week, positive
   // numbers step forward, paginated rather than accumulated: navigating
@@ -466,6 +503,28 @@ export default function JobList() {
         }}
       >
         <div style={{ display: 'flex', gap: 6 }}>
+          <Menu
+            checkedValues={{ rowSize: [rowSize] }}
+            onCheckedValueChange={(_, data) => changeRowSize(data.checkedItems[0])}
+          >
+            <MenuTrigger disableButtonEnhancement>
+              <Button
+                appearance="subtle"
+                icon={<TextFontSize20Regular />}
+                aria-label="Row size"
+                title={`Row size: ${ROW_SIZES.find((x) => x.value === rowSize).label}`}
+              />
+            </MenuTrigger>
+            <MenuPopover>
+              <MenuList>
+                {ROW_SIZES.map((x) => (
+                  <MenuItemRadio key={x.value} name="rowSize" value={x.value}>
+                    {x.label}
+                  </MenuItemRadio>
+                ))}
+              </MenuList>
+            </MenuPopover>
+          </Menu>
           <Button
             appearance={activePanel === 'search' || searchText ? 'primary' : 'subtle'}
             icon={<Search20Regular />}
@@ -558,7 +617,7 @@ export default function JobList() {
         </div>
       )}
 
-      <div>
+      <div data-row-size={rowSize}>
         {(() => {
           // Each visible job's active assignments — now that multiple subs
           // can work the same job (one for prep, another for the pour, or
