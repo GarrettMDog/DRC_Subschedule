@@ -327,3 +327,13 @@ body {
     display: inline;
   }
 }
+
+/* Jobs page on phones: let the toolbar and rows use the full width (the shared
+   layout pads the page 24px each side), so the week navigation and the icon
+   buttons can share one toolbar row on a narrow screen. Jobs page only. */
+@media (max-width: 599px) {
+  .jobs-page {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}

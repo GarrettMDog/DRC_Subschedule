@@ -28,6 +28,20 @@ export function formatDateRange(startDate, endDate) {
 }
 
 /**
+ * Compact week/range label for tight spaces (like the Jobs toolbar): "10/19 – 10/23".
+ * Drops the year, and never says "Today" the way formatDate does.
+ */
+export function formatShortDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return '';
+  const short = (d) => {
+    const [, month, day] = d.split('-');
+    return `${month}/${day}`;
+  };
+  if (startDate === endDate) return short(startDate);
+  return `${short(startDate)} – ${short(endDate)}`;
+}
+
+/**
  * Parses a YYYY-MM-DD string into a local-time Date object (midnight local,
  * not UTC). Useful when something downstream (like an Excel export) needs a
  * real Date instance rather than a formatted display string.

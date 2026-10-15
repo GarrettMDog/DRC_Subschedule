@@ -17,6 +17,8 @@ import {
 } from '@fluentui/react-components';
 import {
   ChevronRight16Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
   Search20Regular,
   Filter20Regular,
   Add20Regular,
@@ -29,7 +31,7 @@ import LeafIcon from '../components/LeafIcon';
 import AddJobDrawer from '../components/job/AddJobDrawer';
 import EditJobDrawer from '../components/job/EditJobDrawer';
 import EditAssignmentDrawer from '../components/job/EditAssignmentDrawer';
-import { formatDateRange, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
+import { formatShortDateRange, formatDateHeader, formatTime, toYMD, getWeek0Monday, getWeekOffsetForDate } from '../dateUtils';
 import {
   materialsOrderedColor,
   formatJobType,
@@ -397,7 +399,179 @@ export default function JobList() {
     return map;
   }, [assignments]);
 
+  // Everything the schedule list AND the toolbar's week navigation need, computed
+  // once per change rather than inline while rendering — the week label in the
+  // toolbar depends on the same data (weekend jobs, a linked date) as the list.
+  const todayYMD = toYMD(new Date());
+  const schedule = useMemo(() => {
+    // Each visible job's active assignments — now that multiple subs
+    // can work the same job (one for prep, another for the pour, or
+    // the same sub back on a separate non-consecutive date), a job
+    // can have more than one.
+    const jobsWithAssignments = visibleJobs.map((j) => ({
+      job: j,
+      activeAssignments: (assignmentsByJob.get(j.id) || []).filter(
+        (a) => a.status !== 'cancelled' && a.status !== 'declined'
+      )
+    }));
+
+    // Filtering by a specific subcontractor hides everything else,
+    // unassigned jobs included — but now checks whether ANY of a
+    // job's assignments match, not just a single one. Created-by is
+    // a separate, independent filter — a job only needs to satisfy
+    // whichever of these two are actually set.
+    const filtered = jobsWithAssignments.filter((x) => {
+      if (subFilterId !== null && !x.activeAssignments.some((a) => a.subcontractor_id === subFilterId)) {
+        return false;
+      }
+      if (createdByFilter !== null && x.job.created_by !== createdByFilter) {
+        return false;
+      }
+      return true;
+    });
+
+    const unassigned = filtered.filter((x) => x.activeAssignments.length === 0).map((x) => x.job);
+
+    // Master group: date only now — subcontractor no longer creates
+    // its own sub-grouping, since who's assigned now shows directly
+    // on each job's own tile instead. A job with multiple assignments
+    // still correctly appears once per assignment — e.g. once under
+    // Wednesday for Sub A and once under Monday for Sub B, since
+    // those are genuinely different working days for this job.
+    const dateGroups = {};
+
+    // Pre-seed the next 28 days (today through today+27) so the
+    // office can see open/unbooked days at a glance, not just days
+    // that already have something on them. Skipped while actively
+    // searching — someone typing an address is looking for a
+    // specific match, not browsing a calendar, so a focused "no
+    // matches" message serves them better than 28 empty blocks.
+    if (!searchText.trim()) {
+      for (let i = 0; i < 28; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        dateGroups[toYMD(d)] = [];
+      }
+    }
+
+    // Viewing a past week (reached via a Calendar link): seed that
+    // week's Mon–Fri too, so a week with nothing on it reads as "No jobs
+    // scheduled" rows rather than a completely blank page.
+    if (!searchText.trim() && weekOffset < 0) {
+      const pastMonday = getWeek0Monday();
+      pastMonday.setDate(pastMonday.getDate() + weekOffset * 7);
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(pastMonday);
+        d.setDate(d.getDate() + i);
+        dateGroups[toYMD(d)] = [];
+      }
+    }
+
+    for (const { job, activeAssignments } of filtered) {
+      for (const a of activeAssignments) {
+        if (!includePastJobs && a.end_date < todayYMD) continue;
+        if (subFilterId !== null && a.subcontractor_id !== subFilterId) continue;
+        const date = a.start_date;
+        if (!dateGroups[date]) dateGroups[date] = [];
+        dateGroups[date].push({ job, subName: a.subcontractor_name });
+      }
+    }
+
+    // Guarantees a row exists for the exact date a past-date Calendar
+    // link is pointed at, even if it turns out to have zero jobs on
+    // it — otherwise there'd be nothing for the scroll effect above
+    // to find, same gap as a day that was never pre-seeded.
+    if (linkedDate && !dateGroups[linkedDate]) {
+      dateGroups[linkedDate] = [];
+    }
+
+    const dateKeys = Object.keys(dateGroups).sort();
+
+    // Within a day, order by subcontractor first — alphabetically —
+    // so jobs for the same sub still land next to each other even
+    // without a visual grouping header anymore. Within a given
+    // subcontractor, a job with no time set comes first (unscheduled
+    // work shows before the day's scheduled jobs), then remaining
+    // jobs go earliest-time-first. Deliberately the opposite of the
+    // no-time-goes-last convention used elsewhere in the app — this
+    // sort specifically was asked to put unscheduled jobs first.
+    for (const date of dateKeys) {
+      dateGroups[date].sort((a, b) => {
+        const subCompare = (a.subName || '').localeCompare(b.subName || '');
+        if (subCompare !== 0) return subCompare;
+        if (!a.job.time && !b.job.time) return 0;
+        if (!a.job.time) return -1;
+        if (!b.job.time) return 1;
+        return a.job.time.localeCompare(b.job.time);
+      });
+    }
+
+    const allDatesEmpty = dateKeys.every((d) => dateGroups[d].length === 0);
+    // The date range for whichever week is currently being viewed.
+    // Week 0's Monday rolls forward to next week if today falls on
+    // a weekend, matching the same logic used to decide whether
+    // today's own week extends through an active Saturday — a job
+    // scheduled only on Sunday (nothing on Saturday) still needs to
+    // extend the week to include it, so both days are checked
+    // independently rather than assuming Saturday-active implies
+    // Sunday-active or vice versa.
+    const week0Monday = getWeek0Monday();
+
+    const weekNMonday = new Date(week0Monday);
+    weekNMonday.setDate(weekNMonday.getDate() + weekOffset * 7);
+    const weekNFriday = new Date(weekNMonday);
+    weekNFriday.setDate(weekNFriday.getDate() + 4);
+    const weekNSaturday = new Date(weekNFriday);
+    weekNSaturday.setDate(weekNSaturday.getDate() + 1);
+    const weekNSunday = new Date(weekNSaturday);
+    weekNSunday.setDate(weekNSunday.getDate() + 1);
+
+    // A weekend day counts as "active" if it has jobs OR it's the exact
+    // date a Calendar link pointed at — otherwise the week range would
+    // stop at Friday and clip the linked day right back out of view.
+    const weekendDayActive = (d) => {
+      const ymd = toYMD(d);
+      return dateGroups[ymd]?.length > 0 || ymd === linkedDate;
+    };
+    let weekEnd = weekNFriday;
+    if (weekendDayActive(weekNSunday)) {
+      weekEnd = weekNSunday;
+    } else if (weekendDayActive(weekNSaturday)) {
+      weekEnd = weekNSaturday;
+    }
+    const weekStartYMD = toYMD(weekNMonday);
+    const weekEndYMD = toYMD(weekEnd);
+
+    // Hide an empty Saturday/Sunday entirely rather than even showing
+    // the compact "no jobs" row — a weekend only earns a spot in the
+    // list once something's actually scheduled on it. Exception: the
+    // exact date a Calendar link pointed at always gets shown, even
+    // an empty weekend day — there has to be something there to
+    // scroll to, or the link just silently does nothing.
+    const visibleDateKeys = dateKeys.filter((dateKey) => {
+      if (dateKey === linkedDate) return true;
+      const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      return !isWeekend || dateGroups[dateKey].length > 0;
+    });
+
+    const withinRevealedWeeks = visibleDateKeys.filter(
+      (dateKey) => dateKey >= weekStartYMD && dateKey <= weekEndYMD
+    );
+
+    return {
+      unassigned,
+      dateGroups,
+      isEmpty: unassigned.length === 0 && allDatesEmpty,
+      weekStartYMD,
+      weekEndYMD,
+      withinRevealedWeeks
+    };
+  }, [visibleJobs, assignmentsByJob, subFilterId, createdByFilter, searchText, includePastJobs, linkedDate, weekOffset, todayYMD]);
+
   if (loading) return <p>Loading…</p>;
+
+  const { unassigned, dateGroups, weekStartYMD, weekEndYMD, withinRevealedWeeks } = schedule;
 
   const isCreating = drawerContent === 'create';
   const editingJob = drawerContent && drawerContent !== 'create' ? drawerContent : null;
@@ -481,7 +655,7 @@ export default function JobList() {
 
   return (
     // data-row-size drives the row height AND the toolbar button size (see styles.css)
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }} data-row-size={rowSize}>
+    <div className="jobs-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }} data-row-size={rowSize}>
       {error && (
         <MessageBar intent="error">
           <MessageBarBody>{error}</MessageBarBody>
@@ -492,7 +666,7 @@ export default function JobList() {
         ref={toolbarRef}
         style={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: 8,
@@ -503,7 +677,45 @@ export default function JobList() {
           padding: '6px 0'
         }}
       >
-        <div style={{ display: 'flex', gap: 6 }}>
+        {/* Week navigation lives in the sticky toolbar so it's always in reach
+            while scrolling — browsing other weeks is the main thing this page
+            is for. Arrow-only buttons keep it compact beside the icon buttons. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Button
+            className="jobs-toolbar-btn"
+            appearance="subtle"
+            icon={<ChevronLeft20Regular />}
+            aria-label="Previous week"
+            title="Previous week"
+            // Going back is only offered from the current week while
+            // viewing past weeks via a Calendar link (includePastJobs);
+            // ordinary browsing stays today-forward.
+            disabled={(weekOffset <= 0 && !includePastJobs) || weekOffset <= -52}
+            onClick={() => {
+              setLinkedDate(null);
+              setWeekOffset((w) => w - 1);
+            }}
+          />
+          <strong style={{ fontSize: 13, whiteSpace: 'nowrap', padding: '0 2px' }}>
+            {weekOffset === 0 ? 'This week' : formatShortDateRange(weekStartYMD, weekEndYMD)}
+          </strong>
+          <Button
+            className="jobs-toolbar-btn"
+            appearance="subtle"
+            icon={<ChevronRight20Regular />}
+            aria-label="Next week"
+            title="Next week"
+            disabled={weekOffset >= 3}
+            onClick={() => {
+              // Stepping through past weeks keeps their jobs visible;
+              // paging forward out of the current week ends that.
+              if (weekOffset >= 0) setIncludePastJobs(false);
+              setLinkedDate(null);
+              setWeekOffset((w) => Math.min(3, w + 1));
+            }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 4, marginLeft: 'auto' }}>
           <Menu
             checkedValues={{ rowSize: [rowSize] }}
             onCheckedValueChange={(_, data) => changeRowSize(data.checkedItems[0])}
@@ -628,300 +840,100 @@ export default function JobList() {
       )}
 
       <div>
-        {(() => {
-          // Each visible job's active assignments — now that multiple subs
-          // can work the same job (one for prep, another for the pour, or
-          // the same sub back on a separate non-consecutive date), a job
-          // can have more than one.
-          const jobsWithAssignments = visibleJobs.map((j) => ({
-            job: j,
-            activeAssignments: (assignmentsByJob.get(j.id) || []).filter(
-              (a) => a.status !== 'cancelled' && a.status !== 'declined'
-            )
-          }));
-
-          // Filtering by a specific subcontractor hides everything else,
-          // unassigned jobs included — but now checks whether ANY of a
-          // job's assignments match, not just a single one. Created-by is
-          // a separate, independent filter — a job only needs to satisfy
-          // whichever of these two are actually set.
-          const filtered = jobsWithAssignments.filter((x) => {
-            if (subFilterId !== null && !x.activeAssignments.some((a) => a.subcontractor_id === subFilterId)) {
-              return false;
-            }
-            if (createdByFilter !== null && x.job.created_by !== createdByFilter) {
-              return false;
-            }
-            return true;
-          });
-
-          const unassigned = filtered.filter((x) => x.activeAssignments.length === 0).map((x) => x.job);
-
-          // Today and future only — a fully concluded assignment drops off,
-          // same rule this used to have on the Dashboard's old list view.
-          const todayYMD = toYMD(new Date());
-
-          // Master group: date only now — subcontractor no longer creates
-          // its own sub-grouping, since who's assigned now shows directly
-          // on each job's own tile instead. A job with multiple assignments
-          // still correctly appears once per assignment — e.g. once under
-          // Wednesday for Sub A and once under Monday for Sub B, since
-          // those are genuinely different working days for this job.
-          const dateGroups = {};
-
-          // Pre-seed the next 28 days (today through today+27) so the
-          // office can see open/unbooked days at a glance, not just days
-          // that already have something on them. Skipped while actively
-          // searching — someone typing an address is looking for a
-          // specific match, not browsing a calendar, so a focused "no
-          // matches" message serves them better than 28 empty blocks.
-          if (!searchText.trim()) {
-            for (let i = 0; i < 28; i++) {
-              const d = new Date();
-              d.setDate(d.getDate() + i);
-              dateGroups[toYMD(d)] = [];
-            }
-          }
-
-          // Viewing a past week (reached via a Calendar link): seed that
-          // week's Mon–Fri too, so a week with nothing on it reads as "No jobs
-          // scheduled" rows rather than a completely blank page.
-          if (!searchText.trim() && weekOffset < 0) {
-            const pastMonday = getWeek0Monday();
-            pastMonday.setDate(pastMonday.getDate() + weekOffset * 7);
-            for (let i = 0; i < 5; i++) {
-              const d = new Date(pastMonday);
-              d.setDate(d.getDate() + i);
-              dateGroups[toYMD(d)] = [];
-            }
-          }
-
-          for (const { job, activeAssignments } of filtered) {
-            for (const a of activeAssignments) {
-              if (!includePastJobs && a.end_date < todayYMD) continue;
-              if (subFilterId !== null && a.subcontractor_id !== subFilterId) continue;
-              const date = a.start_date;
-              if (!dateGroups[date]) dateGroups[date] = [];
-              dateGroups[date].push({ job, subName: a.subcontractor_name });
-            }
-          }
-
-          // Guarantees a row exists for the exact date a past-date Calendar
-          // link is pointed at, even if it turns out to have zero jobs on
-          // it — otherwise there'd be nothing for the scroll effect above
-          // to find, same gap as a day that was never pre-seeded.
-          if (linkedDate && !dateGroups[linkedDate]) {
-            dateGroups[linkedDate] = [];
-          }
-
-          const dateKeys = Object.keys(dateGroups).sort();
-
-          // Within a day, order by subcontractor first — alphabetically —
-          // so jobs for the same sub still land next to each other even
-          // without a visual grouping header anymore. Within a given
-          // subcontractor, a job with no time set comes first (unscheduled
-          // work shows before the day's scheduled jobs), then remaining
-          // jobs go earliest-time-first. Deliberately the opposite of the
-          // no-time-goes-last convention used elsewhere in the app — this
-          // sort specifically was asked to put unscheduled jobs first.
-          for (const date of dateKeys) {
-            dateGroups[date].sort((a, b) => {
-              const subCompare = (a.subName || '').localeCompare(b.subName || '');
-              if (subCompare !== 0) return subCompare;
-              if (!a.job.time && !b.job.time) return 0;
-              if (!a.job.time) return -1;
-              if (!b.job.time) return 1;
-              return a.job.time.localeCompare(b.job.time);
-            });
-          }
-
-          const allDatesEmpty = dateKeys.every((d) => dateGroups[d].length === 0);
-          if (unassigned.length === 0 && allDatesEmpty) {
-            if (jobs.length === 0) return <p>No jobs yet. Click "Add job" to create one.</p>;
-            return <p>No jobs match your search/filter.</p>;
-          }
-
-          // The date range for whichever week is currently being viewed.
-          // Week 0's Monday rolls forward to next week if today falls on
-          // a weekend, matching the same logic used to decide whether
-          // today's own week extends through an active Saturday — a job
-          // scheduled only on Sunday (nothing on Saturday) still needs to
-          // extend the week to include it, so both days are checked
-          // independently rather than assuming Saturday-active implies
-          // Sunday-active or vice versa.
-          const week0Monday = getWeek0Monday();
-
-          const weekNMonday = new Date(week0Monday);
-          weekNMonday.setDate(weekNMonday.getDate() + weekOffset * 7);
-          const weekNFriday = new Date(weekNMonday);
-          weekNFriday.setDate(weekNFriday.getDate() + 4);
-          const weekNSaturday = new Date(weekNFriday);
-          weekNSaturday.setDate(weekNSaturday.getDate() + 1);
-          const weekNSunday = new Date(weekNSaturday);
-          weekNSunday.setDate(weekNSunday.getDate() + 1);
-
-          // A weekend day counts as "active" if it has jobs OR it's the exact
-          // date a Calendar link pointed at — otherwise the week range would
-          // stop at Friday and clip the linked day right back out of view.
-          const weekendDayActive = (d) => {
-            const ymd = toYMD(d);
-            return dateGroups[ymd]?.length > 0 || ymd === linkedDate;
-          };
-          let weekEnd = weekNFriday;
-          if (weekendDayActive(weekNSunday)) {
-            weekEnd = weekNSunday;
-          } else if (weekendDayActive(weekNSaturday)) {
-            weekEnd = weekNSaturday;
-          }
-          const weekStartYMD = toYMD(weekNMonday);
-          const weekEndYMD = toYMD(weekEnd);
-
-          // Hide an empty Saturday/Sunday entirely rather than even showing
-          // the compact "no jobs" row — a weekend only earns a spot in the
-          // list once something's actually scheduled on it. Exception: the
-          // exact date a Calendar link pointed at always gets shown, even
-          // an empty weekend day — there has to be something there to
-          // scroll to, or the link just silently does nothing.
-          const visibleDateKeys = dateKeys.filter((dateKey) => {
-            if (dateKey === linkedDate) return true;
-            const dayOfWeek = new Date(`${dateKey}T00:00:00`).getDay();
-            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-            return !isWeekend || dateGroups[dateKey].length > 0;
-          });
-
-          const withinRevealedWeeks = visibleDateKeys.filter(
-            (dateKey) => dateKey >= weekStartYMD && dateKey <= weekEndYMD
-          );
-
-          return (
-            <>
-              {unassigned.length > 0 && (
-                <div style={{ marginBottom: 20 }}>
-                  <h4 style={{ margin: '0 0 10px' }}>Unassigned ({unassigned.length})</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {unassigned.map((j) => renderJobRow(j))}
-                  </div>
+        {schedule.isEmpty ? (
+          jobs.length === 0 ? (
+            <p>No jobs yet. Click "Add job" to create one.</p>
+          ) : (
+            <p>No jobs match your search/filter.</p>
+          )
+        ) : (
+          <>
+            {unassigned.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <h4 style={{ margin: '0 0 10px' }}>Unassigned ({unassigned.length})</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {unassigned.map((j) => renderJobRow(j))}
                 </div>
-              )}
-
-              {/* Week navigation — browsing other weeks is the main thing
-                  this page is for. */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 8
-                }}
-              >
-                <Button
-                  appearance="subtle"
-                  // Going back is only offered from the current week while
-                  // viewing past weeks via a Calendar link (includePastJobs);
-                  // ordinary browsing stays today-forward.
-                  disabled={(weekOffset <= 0 && !includePastJobs) || weekOffset <= -52}
-                  onClick={() => {
-                    setLinkedDate(null);
-                    setWeekOffset((w) => w - 1);
-                  }}
-                >
-                  ← Prev
-                </Button>
-                <strong>
-                  {weekOffset === 0 ? 'This week' : formatDateRange(weekStartYMD, weekEndYMD)}
-                </strong>
-                <Button
-                  appearance="subtle"
-                  disabled={weekOffset >= 3}
-                  onClick={() => {
-                    // Stepping through past weeks keeps their jobs visible;
-                    // paging forward out of the current week ends that.
-                    if (weekOffset >= 0) setIncludePastJobs(false);
-                    setLinkedDate(null);
-                    setWeekOffset((w) => Math.min(3, w + 1));
-                  }}
-                >
-                  Next →
-                </Button>
               </div>
-              {withinRevealedWeeks.map((dateKey, index) => {
-                const hasJobs = dateGroups[dateKey].length > 0;
-                // A divider between each week — right before a Monday, as
-                // long as it isn't the very first thing in the list (no
-                // point opening the page with a lone divider above day one).
-                const isMonday = new Date(`${dateKey}T00:00:00`).getDay() === 1;
-                const showWeekDivider = isMonday && index > 0;
+            )}
 
-                if (!hasJobs) {
-                  // Compact, single-line, non-sticky row — an empty day has
-                  // nothing underneath it to scroll through, so there's no
-                  // reason to give it the same sticky header treatment and
-                  // full spacing as a day with real content. This is what
-                  // was actually eating most of the screen on a light week:
-                  // a handful of empty days before/after the ones that
-                  // matter, each taking up as much room as a real one.
-                  return (
+            {withinRevealedWeeks.map((dateKey, index) => {
+              const hasJobs = dateGroups[dateKey].length > 0;
+              // A divider between each week — right before a Monday, as
+              // long as it isn't the very first thing in the list (no
+              // point opening the page with a lone divider above day one).
+              const isMonday = new Date(`${dateKey}T00:00:00`).getDay() === 1;
+              const showWeekDivider = isMonday && index > 0;
+
+              if (!hasJobs) {
+                // Compact, single-line, non-sticky row — an empty day has
+                // nothing underneath it to scroll through, so there's no
+                // reason to give it the same sticky header treatment and
+                // full spacing as a day with real content. This is what
+                // was actually eating most of the screen on a light week:
+                // a handful of empty days before/after the ones that
+                // matter, each taking up as much room as a real one.
+                return (
+                  <div
+                    key={dateKey}
+                    ref={(el) => {
+                      // Same ref map as the header below, so a date with
+                      // nothing scheduled is still something the
+                      // Calendar's "jump to this date" link can scroll to.
+                      dateHeaderRefs.current[dateKey] = el;
+                    }}
+                  >
+                    {showWeekDivider && (
+                      <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0' }} />
+                    )}
                     <div
-                      key={dateKey}
-                      ref={(el) => {
-                        // Same ref map as the header below, so a date with
-                        // nothing scheduled is still something the
-                        // Calendar's "jump to this date" link can scroll to.
-                        dateHeaderRefs.current[dateKey] = el;
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '4px 0',
+                        fontSize: 12,
+                        color: 'var(--colorNeutralForeground3)'
                       }}
                     >
-                      {showWeekDivider && (
-                        <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0' }} />
-                      )}
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          padding: '4px 0',
-                          fontSize: 12,
-                          color: 'var(--colorNeutralForeground3)'
-                        }}
-                      >
-                        <span>{formatDateHeader(dateKey)}</span>
-                        <span>No jobs scheduled</span>
-                      </div>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={dateKey}>
-                    {showWeekDivider && (
-                      <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0 16px' }} />
-                    )}
-                    <div style={{ marginBottom: 12 }}>
-                      <h4
-                        ref={(el) => {
-                          dateHeaderRefs.current[dateKey] = el;
-                        }}
-                        style={{
-                          margin: 0,
-                          padding: '6px 0',
-                          position: 'sticky',
-                          top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
-                          zIndex: 5,
-                          background: 'var(--colorNeutralBackground1)',
-                          fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
-                          transition: 'font-size 0.15s ease'
-                        }}
-                      >
-                        {formatDateHeader(dateKey)}
-                      </h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-                        {dateGroups[dateKey].map(({ job, subName }) => renderJobRow(job, subName))}
-                      </div>
+                      <span>{formatDateHeader(dateKey)}</span>
+                      <span>No jobs scheduled</span>
                     </div>
                   </div>
                 );
-              })}
-            </>
-          );
-        })()}
+              }
+
+              return (
+                <div key={dateKey}>
+                  {showWeekDivider && (
+                    <div style={{ borderTop: '2px solid var(--colorNeutralStroke1)', margin: '8px 0 16px' }} />
+                  )}
+                  <div style={{ marginBottom: 12 }}>
+                    <h4
+                      ref={(el) => {
+                        dateHeaderRefs.current[dateKey] = el;
+                      }}
+                      style={{
+                        margin: 0,
+                        padding: '6px 0',
+                        position: 'sticky',
+                        top: 'calc(var(--header-height, 0px) + var(--jobs-toolbar-height, 0px))',
+                        zIndex: 5,
+                        background: 'var(--colorNeutralBackground1)',
+                        fontSize: activeStickyDate === dateKey ? '1.25em' : undefined,
+                        transition: 'font-size 0.15s ease'
+                      }}
+                    >
+                      {formatDateHeader(dateKey)}
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+                      {dateGroups[dateKey].map(({ job, subName }) => renderJobRow(job, subName))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
 
       <AddJobDrawer
